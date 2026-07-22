@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "workflow_steps" ADD COLUMN     "x" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "y" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "workflows" ADD COLUMN     "layout" JSONB NOT NULL DEFAULT '{}';

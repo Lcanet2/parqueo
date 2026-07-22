@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  technician
+  user
+}
+
+enum TicketStatus {
+  new
+  in_progress
+  waiting
+  resolved
+  closed
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+}
+
+enum CommentType {
+  comment
+  event
+}
+
+enum AssetType {
+  pc
+  printer
+  server
+  software
+}
+
+enum AssetStatus {
+  in_service
+  in_repair
+  retired
+}
+
+enum FieldType {
+  text
+  textarea
+  select
+  date
+  checkbox
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  // Nul pour les comptes SSO (pas de mot de passe local). provider : local | entra.
+  passwordHash String?  @map("password_hash")
+  provider     String   @default("local")
+  name         String
+  role         Role     @default(user)
+  teamId       Int?     @map("team_id")
+  team         Team?    @relation(fields: [teamId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  authoredTickets  Ticket[]        @relation("TicketAuthor")
+  assignedTickets  Ticket[]        @relation("TicketAssignee")
+  assignedAssets   Asset[]         @relation("AssetAssignedUser")
+  ticketComments   TicketComment[]
+  attachments      Attachment[]
+  kbArticles       KbArticle[]
+
+  @@map("users")
+}
+
+model Team {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  members       User[]
+  tickets       Ticket[]
+
+  @@map("teams")
+}
+
+model Category {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  tickets       Ticket[]
+  forms         Form[]
+  kbArticles    KbArticle[]
+
+  @@map("categories")
+}
+
+model Ticket {
+  id          Int            @id @default(autoincrement())
+  title       String
+  description String
+  status      TicketStatus   @default(new)
+  priority    TicketPriority @default(medium)
+
+  categoryId Int      @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  authorId Int  @map("author_id")
+  author   User @relation("TicketAuthor", fields: [authorId], references: [id])
+
+  assigneeId Int?  @map("assignee_id")
+  assignee   User? @relation("TicketAssignee", fields: [assigneeId], references: [id])
+
+  teamId Int?  @map("team_id")
+  team   Team? @relation(fields: [teamId], references: [id])
+
+  assetId Int?   @map("asset_id")
+  asset   Asset? @relation(fields: [assetId], references: [id])
+
+  // Formulaire d'origine (catalogue de services) — permet de cibler un workflow.
+  formId Int?  @map("form_id")
+  form   Form? @relation(fields: [formId], references: [id])
+
+  // Enquête un clic à la résolution : 1 = satisfait, 0 = insatisfait
+  satisfaction   Int?      @map("satisfaction")
+  satisfactionAt DateTime? @map("satisfaction_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  comments     TicketComment[]
+  attachments  Attachment[]
+  workflowRuns WorkflowRun[]
+
+  @@map("tickets")
+}
+
+model TicketComment {
+  id       Int         @id @default(autoincrement())
+  ticketId Int         @map("ticket_id")
+  ticket   Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId Int         @map("author_id")
+  author   User        @relation(fields: [authorId], references: [id])
+  type     CommentType @default(comment)
+  body     String
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("ticket_comments")
+}
+
+model Attachment {
+  id         Int      @id @default(autoincrement())
+  ticketId   Int      @map("ticket_id")
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  filename   String
+  storedPath String   @map("stored_path")
+  size       Int
+  uploadedBy Int      @map("uploaded_by")
+  uploader   User     @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("attachments")
+}
+
+model Asset {
+  id             Int         @id @default(autoincrement())
+  name           String
+  type           AssetType
+  location       String?
+  purchaseDate   DateTime?   @map("purchase_date")
+  status         AssetStatus @default(in_service)
+  assignedUserId Int?        @map("assigned_user_id")
+  assignedUser   User?       @relation("AssetAssignedUser", fields: [assignedUserId], references: [id])
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  tickets Ticket[]
+
+  @@map("assets")
+}
+
+// Formulaires de demande (catalogue de services, façon Formcreator intégré au cœur).
+model Form {
+  id          Int            @id @default(autoincrement())
+  name        String
+  description String?
+  active      Boolean        @default(true)
+  categoryId  Int            @map("category_id")
+  category    Category       @relation(fields: [categoryId], references: [id])
+  priority    TicketPriority @default(medium)
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  fields  FormField[]
+  tickets Ticket[]
+
+  @@map("forms")
+}
+
+model FormField {
+  id       Int       @id @default(autoincrement())
+  formId   Int       @map("form_id")
+  form     Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  label    String
+  type     FieldType @default(text)
+  required Boolean   @default(false)
+  options  String? // JSON: tableau de choix pour le type select
+  position Int       @default(0)
+
+  @@map("form_fields")
+}
+
+// Configuration globale définie par les admins et répercutée sur tous les
+// comptes (layouts de dashboard par rôle, et toute future config partagée).
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// Base de connaissances : articles courts liés aux catégories, suggérés à la
+// création de ticket pour réduire le volume de demandes.
+model KbArticle {
+  id         Int       @id @default(autoincrement())
+  title      String
+  body       String
+  published  Boolean   @default(true)
+  categoryId Int?      @map("category_id")
+  category   Category? @relation(fields: [categoryId], references: [id])
+  authorId   Int       @map("author_id")
+  author     User      @relation(fields: [authorId], references: [id])
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("kb_articles")
+}
+
+// Workflows : machine à états. Un ticket qui correspond au déclencheur entre au
+// premier bloc et avance ; il reste parqué sur un bloc « attente » tant que sa
+// condition n'est pas remplie (ticket pris, statut atteint…). Remplace les
+// anciennes « règles » (converties à la migration).
+model Workflow {
+  id         Int      @id @default(autoincrement())
+  name       String
+  active     Boolean  @default(true)
+  trigger    String // ticket_created | status_changed
+  conditions Json     @default("{}") // { categoryId?, formId?, priority?, toStatus? }
+  position   Int      @default(0)
+  layout     Json     @default("{}") // disposition du canvas : { trigger: {x,y} }
+  // Graphe d'exécution : { "trigger": "clé", "clé": "cléSuivante",
+  //   "cléCondition": { "yes": "clé", "no": "clé" } }. Les fils du canvas.
+  edges      Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  steps WorkflowStep[]
+  runs  WorkflowRun[]
+
+  @@map("workflows")
+}
+
+model WorkflowStep {
+  id         Int      @id @default(autoincrement())
+  workflowId Int      @map("workflow_id")
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  position   Int      @default(0) // ordre indicatif (l'exécution suit edges)
+  key        String   @default("") // identifiant stable référencé par edges
+  // Actions : assign_team | assign_user | set_priority | set_status | add_note | send_email | webhook
+  // Attente : wait_assigned | wait_status · Branche : condition (sorties yes/no)
+  type   String
+  config Json   @default("{}")
+  x      Float  @default(0) // position sur le canvas
+  y      Float  @default(0)
+
+  @@map("workflow_steps")
+}
+
+// Position d'un ticket dans un workflow : sur quel bloc il est parqué.
+model WorkflowRun {
+  id         Int      @id @default(autoincrement())
+  ticketId   Int      @map("ticket_id")
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  workflowId Int      @map("workflow_id")
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  position   Int      @default(0) // hérité (mode linéaire) — l'exécution suit nodeKey
+  nodeKey    String?  @map("node_key") // clé du bloc d'attente où le ticket est parqué
+  status     String   @default("running") // running | done
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([ticketId, workflowId])
+  @@map("workflow_runs")
+}
+

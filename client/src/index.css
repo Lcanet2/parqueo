@@ -1,0 +1,42 @@
+@import '@fontsource-variable/inter';
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
+
+  /* Palette sobre inspirée n8n, version claire */
+  --color-canvas: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-line: #e4e4e7;
+  --color-ink: #1c1c21;
+  --color-ink-soft: #6b6b76;
+  --color-ink-faint: #9b9ba4;
+
+  /* Accent unique, utilisé avec parcimonie */
+  --color-accent: #d9435f;
+  --color-accent-strong: #bf3651;
+  --color-accent-soft: #fdf0f2;
+
+  /* États tickets */
+  --color-status-new: #3467d6;
+  --color-status-new-bg: #edf2fc;
+  --color-status-progress: #b25e09;
+  --color-status-progress-bg: #fdf3e5;
+  --color-status-waiting: #6d28d9;
+  --color-status-waiting-bg: #f3eefc;
+  --color-status-resolved: #15803d;
+  --color-status-resolved-bg: #ebf7ef;
+  --color-status-closed: #52525b;
+  --color-status-closed-bg: #f0f0f1;
+}
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
