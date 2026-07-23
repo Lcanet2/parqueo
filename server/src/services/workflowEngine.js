@@ -219,7 +219,7 @@ async function applyAction(step, ticket, wf) {
       if (!to) return ticket;
       await sendMail(
         to,
-        renderTemplate(cfg.subject ?? '', ticket) || `[IT Desk] Ticket #${ticket.id}`,
+        renderTemplate(cfg.subject ?? '', ticket) || `[Parqueo] Ticket #${ticket.id}`,
         renderTemplate(cfg.body ?? '', ticket)
       );
       return ticket;
@@ -234,7 +234,7 @@ async function applyAction(step, ticket, wf) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(cfg.secret ? { 'X-ITDesk-Token': cfg.secret } : {}),
+            ...(cfg.secret ? { 'X-Parqueo-Token': cfg.secret } : {}),
           },
           body: JSON.stringify({ event: wf.trigger, workflow: wf.name, ticket }),
           signal: controller.signal,

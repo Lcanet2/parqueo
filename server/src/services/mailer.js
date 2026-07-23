@@ -53,7 +53,7 @@ export async function notifyTicketCreated(ticket) {
   const to = [ticket.author?.email, ticket.assignee?.email].filter(Boolean).join(', ');
   return send(
     to,
-    `[IT Desk] Ticket #${ticket.id} créé : ${ticket.title}`,
+    `[Parqueo] Ticket #${ticket.id} créé : ${ticket.title}`,
     `Le ticket #${ticket.id} « ${ticket.title} » a été créé.\n\n${ticket.description}\n\nPriorité : ${PRIORITY_LABELS[ticket.priority] ?? ticket.priority}`
   );
 }
@@ -68,14 +68,14 @@ export async function notifyStatusChanged(ticket, oldStatus) {
   if (ticket.status === 'resolved' && settings.satisfactionSurvey) {
     body += `\n\n${satisfactionLinks(ticket)}`;
   }
-  return send(to, `[IT Desk] Ticket #${ticket.id} : ${oldLabel} → ${newLabel}`, body);
+  return send(to, `[Parqueo] Ticket #${ticket.id} : ${oldLabel} → ${newLabel}`, body);
 }
 
 export async function notifyAssigned(ticket) {
   if (!(await getAppSettings()).notifyOnAssign) return;
   return send(
     ticket.assignee?.email,
-    `[IT Desk] Ticket #${ticket.id} vous a été assigné : ${ticket.title}`,
+    `[Parqueo] Ticket #${ticket.id} vous a été assigné : ${ticket.title}`,
     `Le ticket #${ticket.id} « ${ticket.title} » vous a été assigné.\n\nPriorité : ${PRIORITY_LABELS[ticket.priority] ?? ticket.priority}\nDemandeur : ${ticket.author?.name ?? '—'}`
   );
 }
@@ -89,7 +89,7 @@ export async function notifyCommentAdded(ticket, comment) {
     .join(', ');
   return send(
     to,
-    `[IT Desk] Ticket #${ticket.id} : nouveau message de ${comment.author?.name ?? '—'}`,
+    `[Parqueo] Ticket #${ticket.id} : nouveau message de ${comment.author?.name ?? '—'}`,
     `${comment.author?.name ?? 'Quelqu\'un'} a répondu sur le ticket #${ticket.id} « ${ticket.title} » :\n\n${comment.body}`
   );
 }

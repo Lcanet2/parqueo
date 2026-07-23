@@ -1,7 +1,7 @@
 // Helpers purs du collecteur email — extraits pour être testables sans IMAP.
 
 // Détecte une réponse à un ticket existant via le sujet, p. ex.
-// « Re: [IT Desk] Ticket #12 : mon PC ne démarre plus ».
+// « Re: [Parqueo] Ticket #12 : mon PC ne démarre plus ».
 export function extractTicketId(subject = '') {
   const m = subject.match(/ticket\s*#(\d+)/i);
   return m ? Number(m[1]) : null;
@@ -29,7 +29,7 @@ export function stripQuotedReply(text = '') {
   return text.slice(0, cut).trim();
 }
 
-// Extrait l'adresse seule d'un champ From, p. ex. « IT Desk <no-reply@x.fr> ».
+// Extrait l'adresse seule d'un champ From, p. ex. « Parqueo <no-reply@x.fr> ».
 export function bareAddress(from = '') {
   const m = from.match(/<([^>]+)>/);
   return (m ? m[1] : from).trim().toLowerCase();

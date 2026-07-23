@@ -48,15 +48,15 @@ async function main() {
     });
   };
 
-  const admin = await upsertUser('admin@it-desk.local', 'Administrateur', 'admin');
+  const admin = await upsertUser('admin@parqueo.local', 'Administrateur', 'admin');
   const techs = [
-    await upsertUser('tech@it-desk.local', 'Théo Technicien', 'technician', teams['Support IT'].id),
-    await upsertUser('sarah.lemoine@it-desk.local', 'Sarah Lemoine', 'technician', teams['Support IT'].id),
-    await upsertUser('karim.benali@it-desk.local', 'Karim Benali', 'technician', teams['Support N2'].id),
-    await upsertUser('julie.moreau@it-desk.local', 'Julie Moreau', 'technician', teams['Infrastructure'].id),
+    await upsertUser('tech@parqueo.local', 'Théo Technicien', 'technician', teams['Support IT'].id),
+    await upsertUser('sarah.lemoine@parqueo.local', 'Sarah Lemoine', 'technician', teams['Support IT'].id),
+    await upsertUser('karim.benali@parqueo.local', 'Karim Benali', 'technician', teams['Support N2'].id),
+    await upsertUser('julie.moreau@parqueo.local', 'Julie Moreau', 'technician', teams['Infrastructure'].id),
   ];
   const endUsers = [
-    await upsertUser('user@it-desk.local', 'Lucie Utilisatrice', 'user'),
+    await upsertUser('user@parqueo.local', 'Lucie Utilisatrice', 'user'),
     await upsertUser('marc.dupont@entreprise.fr', 'Marc Dupont', 'user'),
     await upsertUser('claire.martin@entreprise.fr', 'Claire Martin', 'user'),
     await upsertUser('paul.bernard@entreprise.fr', 'Paul Bernard', 'user'),

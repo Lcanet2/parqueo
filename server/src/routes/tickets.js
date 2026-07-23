@@ -77,7 +77,7 @@ async function findVisibleTicket(id, user) {
 function satisfactionPage(res, status, title, detail) {
   res.status(status).send(
     `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-    <title>IT Desk</title>
+    <title>Parqueo</title>
     <body style="font-family:system-ui,sans-serif;background:#f7f7f8;color:#1c1c21;display:flex;justify-content:center;padding-top:15vh">
     <div style="background:#fff;border:1px solid #e4e4e7;border-radius:8px;padding:32px 40px;text-align:center;max-width:420px">
     <h1 style="font-size:18px;margin:0 0 8px">${title}</h1>

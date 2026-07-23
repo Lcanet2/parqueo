@@ -669,7 +669,7 @@ function StepConfig({ node, refs, onConfig }) {
           <Field label="URL du webhook">
             <Input value={cfg.url} onChange={(e) => set('url', e.target.value)} placeholder="https://n8n.exemple.fr/webhook/…" />
           </Field>
-          <Field label="Jeton secret (en-tête X-ITDesk-Token)">
+          <Field label="Jeton secret (en-tête X-Parqueo-Token)">
             <Input value={cfg.secret} onChange={(e) => set('secret', e.target.value)} />
           </Field>
           <p className="text-xs text-ink-faint">Le ticket complet est envoyé en POST JSON.</p>

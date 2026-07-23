@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'itdesk_token';
+const TOKEN_KEY = 'parqueo_token';
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);

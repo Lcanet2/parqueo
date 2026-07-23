@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Button, Input, Field, ErrorText } from '../components/ui.jsx';
+import Brand from '../components/Brand.jsx';
 
 export default function Login() {
   const { login } = useAuth();
@@ -39,7 +40,9 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mb-1 text-lg font-semibold tracking-tight">IT Desk</div>
+          <div className="mb-1 text-lg">
+            <Brand />
+          </div>
           <p className="text-sm text-ink-soft">Connectez-vous pour continuer</p>
         </div>
         <form

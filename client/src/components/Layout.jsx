@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
 import { Avatar } from './ui.jsx';
+import Brand from './Brand.jsx';
 import { ROLE } from '../lib/labels.js';
 import {
   IconDashboard,
@@ -61,8 +62,8 @@ export default function Layout() {
     <div className="min-h-screen md:flex">
       {/* Sidebar desktop */}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-surface px-3 py-4 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
-        <Link to="/" className="mb-6 px-3 text-[15px] font-semibold tracking-tight">
-          IT<span className="text-accent"> Desk</span>
+        <Link to="/" className="mb-6 px-3 text-[15px]">
+          <Brand />
         </Link>
         {nav}
         <div className="border-t border-line pt-3">
@@ -87,8 +88,8 @@ export default function Layout() {
       {/* Header mobile */}
       <header className="sticky top-0 z-10 border-b border-line bg-surface md:hidden">
         <div className="flex items-center justify-between px-4 py-2.5">
-          <Link to="/" className="text-[15px] font-semibold tracking-tight">
-            IT<span className="text-accent"> Desk</span>
+          <Link to="/" className="text-[15px]">
+            <Brand />
           </Link>
           <button onClick={onLogout} className="text-sm text-ink-soft">
             Déconnexion

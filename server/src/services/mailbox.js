@@ -10,7 +10,7 @@ import { notifyTicketCreated, notifyCommentAdded } from './mailer.js';
 
 // Collecteur email : les messages envoyés à la boîte IMAP_USER deviennent des
 // tickets ; les réponses (sujet contenant « Ticket #n ») deviennent des
-// commentaires. Seuls les expéditeurs connus (utilisateurs IT Desk) sont
+// commentaires. Seuls les expéditeurs connus (utilisateurs Parqueo) sont
 // acceptés — un email inconnu est ignoré pour éviter les tickets spam.
 
 const ALLOWED_FILES = /\.(png|jpe?g|gif|webp|pdf|txt|log|csv|zip|docx?|xlsx?|pptx?)$/i;
