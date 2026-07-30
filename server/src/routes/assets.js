@@ -58,6 +58,7 @@ router.get('/:id', async (req, res) => {
         select: { id: true, title: true, status: true, priority: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
       },
+      software: { include: { software: true }, orderBy: { software: { name: 'asc' } } },
     },
   });
   if (!asset) return res.status(404).json({ error: 'Actif introuvable' });

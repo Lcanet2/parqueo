@@ -42,6 +42,13 @@ export const IconInventory = (p) => (
   </Icon>
 );
 
+export const IconSoftware = (p) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+
 export const IconAdmin = (p) => (
   <Icon {...p}>
     <line x1="4" y1="21" x2="4" y2="14" />

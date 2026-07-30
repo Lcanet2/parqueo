@@ -42,6 +42,7 @@ function canPersonalize(user, app) {
 const VALIDATORS = {
   ticketDefaultPriority: (v) => ['low', 'medium', 'high'].includes(v),
   autoCloseDays: (v) => Number.isInteger(v) && v >= 0 && v <= 365,
+  assetStaleDays: (v) => Number.isInteger(v) && v >= 0 && v <= 365,
 };
 for (const key of Object.keys(APP_DEFAULTS)) {
   if (!VALIDATORS[key]) VALIDATORS[key] = (v) => typeof v === 'boolean';

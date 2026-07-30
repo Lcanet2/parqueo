@@ -12,6 +12,8 @@ import {
   postLoginUrl,
   newNonce,
 } from '../services/oidc.js';
+import { intuneEnabled } from '../services/intune.js';
+import { snmpEnabled } from '../services/snmp.js';
 
 const router = Router();
 
@@ -28,9 +30,10 @@ function issueToken(user) {
   );
 }
 
-// Le client interroge cet endpoint pour savoir s'il doit afficher le bouton SSO.
+// Le client interroge cet endpoint pour savoir s'il doit afficher le bouton SSO
+// et, côté admin, le bouton de synchronisation Intune.
 router.get('/config', (req, res) => {
-  res.json({ sso: ssoEnabled() });
+  res.json({ sso: ssoEnabled(), intune: intuneEnabled(), snmp: snmpEnabled() });
 });
 
 router.post('/login', async (req, res) => {

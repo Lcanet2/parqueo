@@ -14,6 +14,7 @@ import Kb from './pages/Kb.jsx';
 import KbArticle from './pages/KbArticle.jsx';
 import Assets from './pages/Assets.jsx';
 import AssetDetail from './pages/AssetDetail.jsx';
+import Software from './pages/Software.jsx';
 import Admin from './pages/Admin.jsx';
 import { Spinner } from './components/ui.jsx';
 
@@ -27,6 +28,14 @@ function Protected({ children }) {
 function AdminOnly({ children }) {
   const { user } = useAuth();
   if (user.role !== 'admin') return <Navigate to="/" replace />;
+  return children;
+}
+
+// Réservé au support (technicien + admin) : le catalogue logiciel n'est pas
+// destiné aux utilisateurs finals.
+function StaffOnly({ children }) {
+  const { user } = useAuth();
+  if (user.role === 'user') return <Navigate to="/" replace />;
   return children;
 }
 
@@ -56,6 +65,14 @@ export default function App() {
             <Route path="/aide/:id" element={<KbArticle />} />
             <Route path="/inventaire" element={<Assets />} />
             <Route path="/inventaire/:id" element={<AssetDetail />} />
+            <Route
+              path="/logiciels"
+              element={
+                <StaffOnly>
+                  <Software />
+                </StaffOnly>
+              }
+            />
             <Route
               path="/admin"
               element={

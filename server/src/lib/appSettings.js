@@ -22,6 +22,10 @@ export const APP_DEFAULTS = {
   kbTechniciansWrite: true,
   // Inventaire
   assetsVisibleToUsers: true,
+  // Un actif d'inventaire automatique sans remontée depuis ce nombre de jours
+  // est signalé comme « périmé » dans l'interface (0 = pas de signalement).
+  // Purement visuel : le statut de l'actif n'est jamais modifié.
+  assetStaleDays: 30,
 };
 
 const KEY = 'app.config';

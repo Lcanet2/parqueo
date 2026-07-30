@@ -8,6 +8,7 @@ import {
   IconDashboard,
   IconTickets,
   IconInventory,
+  IconSoftware,
   IconBook,
   IconAdmin,
   IconSettings,
@@ -35,6 +36,7 @@ export default function Layout() {
     { to: '/', label: 'Tableau de bord', end: true, Icon: IconDashboard },
     { to: '/tickets', label: 'Tickets', Icon: IconTickets },
     ...(showInventory ? [{ to: '/inventaire', label: 'Inventaire', Icon: IconInventory }] : []),
+    ...(user.role !== 'user' ? [{ to: '/logiciels', label: 'Logiciels', Icon: IconSoftware }] : []),
     { to: '/aide', label: 'Aide', Icon: IconBook },
   ];
   if (user.role === 'admin') {

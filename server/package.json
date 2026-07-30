@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "mailparser": "^3.9.14",
     "multer": "^2.2.0",
+    "net-snmp": "^3.26.3",
     "nodemailer": "^9.0.3"
   },
   "devDependencies": {

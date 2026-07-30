@@ -175,9 +175,65 @@ model Asset {
   assignedUser   User?       @relation("AssetAssignedUser", fields: [assignedUserId], references: [id])
   createdAt      DateTime    @default(now()) @map("created_at")
 
-  tickets Ticket[]
+  // --- Inventaire automatique ---
+  // Clés d'identité matérielle pour la déduplication à la remontée : on retrouve
+  // un actif déjà connu par son uuid (préféré) puis par son numéro de série.
+  // Nullables et uniques : les actifs saisis à la main n'en ont pas (plusieurs
+  // NULL cohabitent), une valeur réelle ne peut appartenir qu'à un seul actif.
+  uuid   String? @unique
+  serial String? @unique
+  // Origine de l'actif : manual (saisi) | agent | intune | scan.
+  source     String    @default("manual")
+  lastSeenAt DateTime? @map("last_seen_at")
+  // Caractéristiques remontées par l'inventaire — rafraîchies à chaque rapport,
+  // sans écraser les champs gérés par l'admin (nom, lieu, statut, affectation).
+  manufacturer String?
+  model        String?
+  os           String?
+  cpu          String?
+  ramMb        Int?    @map("ram_mb")
+  diskGb       Int?    @map("disk_gb")
+  // Charge utile brute du dernier rapport : rien n'est perdu tant qu'un champ
+  // dédié n'existe pas (cartes réseau, volumes…).
+  raw Json?
+
+  tickets  Ticket[]
+  software SoftwareInstall[]
 
   @@map("assets")
+}
+
+// Catalogue de logiciels : un logiciel = une entrée unique (nom + éditeur),
+// partagée par toutes les installations. Permet les vues transversales
+// (« sur combien de postes ? quelles versions ? ») et la gestion de licences.
+// publisher a un défaut vide plutôt que null pour que la contrainte d'unicité
+// dédoublonne correctement (deux NULL seraient considérés distincts en SQL).
+model Software {
+  id        Int    @id @default(autoincrement())
+  name      String
+  publisher String @default("")
+
+  installs SoftwareInstall[]
+
+  @@unique([name, publisher])
+  @@map("software")
+}
+
+// Installation d'un logiciel du catalogue sur un actif, remontée par
+// l'inventaire. La version est propre à l'installation ; le nom et l'éditeur
+// vivent dans le catalogue. La liste d'un actif est remplacée à chaque rapport,
+// ce qui reflète l'état courant de la machine sans diff à maintenir.
+model SoftwareInstall {
+  id         Int      @id @default(autoincrement())
+  assetId    Int      @map("asset_id")
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  softwareId Int      @map("software_id")
+  software   Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+  version    String?
+
+  @@index([assetId])
+  @@index([softwareId])
+  @@map("software_installs")
 }
 
 // Formulaires de demande (catalogue de services, façon Formcreator intégré au cœur).

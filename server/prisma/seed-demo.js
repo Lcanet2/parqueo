@@ -104,17 +104,47 @@ async function main() {
     );
   }
 
-  // --- Règles de workflow ---
-  const ensureRule = async (categoryId, targetTeamId, targetUserId = null) => {
-    const found = await prisma.workflowRule.findFirst({ where: { categoryId } });
-    if (!found) {
-      await prisma.workflowRule.create({ data: { categoryId, targetTeamId, targetUserId, active: true } });
-    }
+  // --- Workflows de routage ---
+  // Un workflow par catégorie : le ticket créé est affecté à l'équipe qui la
+  // traite, puis assigné au référent quand il y en a un. Les blocs sont posés
+  // sur le canvas à la suite du déclencheur (largeur d'un bloc : 210 px).
+  const TRIGGER_POS = { x: 60, y: 120 };
+
+  const ensureRouting = async (categoryName, teamId, userId = null) => {
+    const name = `Routage — ${categoryName}`;
+    if (await prisma.workflow.findFirst({ where: { name } })) return;
+
+    const steps = [{ key: 'equipe', type: 'assign_team', config: { teamId } }];
+    if (userId) steps.push({ key: 'referent', type: 'assign_user', config: { userId } });
+
+    const edges = { trigger: steps[0].key };
+    if (steps[1]) edges[steps[0].key] = steps[1].key;
+
+    const last = await prisma.workflow.findFirst({ orderBy: { position: 'desc' } });
+    await prisma.workflow.create({
+      data: {
+        name,
+        trigger: 'ticket_created',
+        conditions: { categoryId: categories[categoryName].id },
+        position: (last?.position ?? 0) + 1,
+        layout: { trigger: TRIGGER_POS },
+        edges,
+        steps: {
+          create: steps.map((s, i) => ({
+            ...s,
+            position: i,
+            x: TRIGGER_POS.x + 280 * (i + 1),
+            y: TRIGGER_POS.y,
+          })),
+        },
+      },
+    });
   };
-  await ensureRule(categories['Matériel'].id, teams['Support IT'].id, techs[0].id);
-  await ensureRule(categories['Réseau'].id, teams['Infrastructure'].id, techs[3].id);
-  await ensureRule(categories['Imprimantes'].id, teams['Support IT'].id);
-  await ensureRule(categories['Accès & comptes'].id, teams['Support N2'].id, techs[2].id);
+
+  await ensureRouting('Matériel', teams['Support IT'].id, techs[0].id);
+  await ensureRouting('Réseau', teams['Infrastructure'].id, techs[3].id);
+  await ensureRouting('Imprimantes', teams['Support IT'].id);
+  await ensureRouting('Accès & comptes', teams['Support N2'].id, techs[2].id);
 
   // --- Tickets ---
   const scenarios = [
@@ -251,7 +281,7 @@ async function main() {
     assets: await prisma.asset.count(),
     tickets: await prisma.ticket.count(),
     comments: await prisma.ticketComment.count(),
-    rules: await prisma.workflowRule.count(),
+    workflows: await prisma.workflow.count(),
   };
   console.log(`Seed démo terminé — ${created} tickets créés.`);
   console.table(counts);

@@ -2,22 +2,66 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Badge, Button, Spinner, Card } from '../components/ui.jsx';
+import { useSettings } from '../context/SettingsContext.jsx';
+import { Badge, Button, Spinner, Card, ErrorText } from '../components/ui.jsx';
 import DataTable from '../components/DataTable.jsx';
-import { ASSET_TYPE, ASSET_STATUS, formatDate } from '../lib/labels.js';
+import {
+  ASSET_TYPE,
+  ASSET_STATUS,
+  ASSET_SOURCE,
+  formatDate,
+  formatRelative,
+  isStaleAsset,
+} from '../lib/labels.js';
 import AssetForm from '../components/AssetForm.jsx';
 
 export default function Assets() {
   const { user } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
+  const staleDays = settings?.assetStaleDays ?? 0;
   const [assets, setAssets] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [config, setConfig] = useState({});
+  const [syncing, setSyncing] = useState(null); // 'intune' | 'snmp' | null
+  const [syncMsg, setSyncMsg] = useState(null);
 
   const isStaff = user.role !== 'user';
 
   useEffect(() => {
     api.get('/assets').then(setAssets);
-  }, []);
+    // Les boutons de synchro n'apparaissent que si le connecteur est configuré.
+    if (user.role === 'admin') api.get('/auth/config').then(setConfig).catch(() => {});
+  }, [user.role]);
+
+  // Lance une synchronisation (Intune ou scan SNMP) et rafraîchit la liste.
+  async function runSync(kind, path, format) {
+    setSyncing(kind);
+    setSyncMsg(null);
+    try {
+      const s = await api.post(path);
+      setSyncMsg({ ok: true, text: format(s) });
+      setAssets(await api.get('/assets'));
+    } catch (err) {
+      setSyncMsg({ ok: false, text: err.message });
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  const syncIntune = () =>
+    runSync(
+      'intune',
+      '/inventory/intune/sync',
+      (s) => `Intune : ${s.total} appareil(s) — ${s.created} créé(s), ${s.updated} à jour${s.errors ? `, ${s.errors} erreur(s)` : ''}.`
+    );
+
+  const scanSnmp = () =>
+    runSync(
+      'snmp',
+      '/inventory/snmp/scan',
+      (s) => `Scan SNMP : ${s.responded} réponse(s) sur ${s.scanned} IP — ${s.created} créé(s), ${s.updated} à jour.`
+    );
 
   const columns = [
     {
@@ -54,6 +98,32 @@ export default function Assets() {
       render: (a) => formatDate(a.purchaseDate),
     },
     {
+      key: 'source',
+      label: 'Source',
+      value: (a) => ASSET_SOURCE[a.source]?.label,
+      className: 'hidden sm:table-cell',
+      tdClassName: 'hidden sm:table-cell',
+      render: (a) => <Badge {...ASSET_SOURCE[a.source]} />,
+    },
+    {
+      key: 'lastSeenAt',
+      label: 'Vu',
+      value: (a) => a.lastSeenAt ?? '',
+      filter: false,
+      className: 'hidden lg:table-cell',
+      tdClassName: 'hidden lg:table-cell text-xs text-ink-faint',
+      render: (a) => {
+        if (!a.lastSeenAt) return '—';
+        const stale = isStaleAsset(a, staleDays);
+        return (
+          <span className={stale ? 'text-accent' : undefined} title={stale ? 'Aucune remontée récente' : undefined}>
+            {formatRelative(a.lastSeenAt)}
+            {stale && ' ⚠'}
+          </span>
+        );
+      },
+    },
+    {
       key: 'status',
       label: 'État',
       value: (a) => ASSET_STATUS[a.status].label,
@@ -66,11 +136,30 @@ export default function Assets() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold tracking-tight">Inventaire</h1>
         {isStaff && (
-          <Button variant="primary" onClick={() => setCreating(true)}>
-            Ajouter un actif
-          </Button>
+          <div className="flex gap-2">
+            {user.role === 'admin' && config.snmp && (
+              <Button onClick={scanSnmp} disabled={syncing !== null}>
+                {syncing === 'snmp' ? 'Scan en cours…' : 'Scanner le réseau'}
+              </Button>
+            )}
+            {user.role === 'admin' && config.intune && (
+              <Button onClick={syncIntune} disabled={syncing !== null}>
+                {syncing === 'intune' ? 'Synchronisation…' : 'Synchroniser Intune'}
+              </Button>
+            )}
+            <Button variant="primary" onClick={() => setCreating(true)}>
+              Ajouter un actif
+            </Button>
+          </div>
         )}
       </div>
+
+      {syncMsg &&
+        (syncMsg.ok ? (
+          <p className="text-sm text-status-resolved">{syncMsg.text}</p>
+        ) : (
+          <ErrorText>{syncMsg.text}</ErrorText>
+        ))}
 
       {creating && (
         <Card title="Nouvel actif">

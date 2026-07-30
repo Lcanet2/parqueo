@@ -12,6 +12,14 @@ const AUTO_CLOSE_CHOICES = [
   { value: 30, label: 'Après 30 jours' },
 ];
 
+const STALE_CHOICES = [
+  { value: 0, label: 'Désactivé' },
+  { value: 7, label: 'Après 7 jours' },
+  { value: 30, label: 'Après 30 jours' },
+  { value: 60, label: 'Après 60 jours' },
+  { value: 90, label: 'Après 90 jours' },
+];
+
 function Row({ label, hint, children }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-3">
@@ -187,6 +195,20 @@ export default function Settings() {
             hint="Chaque utilisateur ne voit que ses propres équipements ; désactivé, la section disparaît pour eux"
           >
             {toggle('assetsVisibleToUsers')}
+          </Row>
+          <Row
+            label="Signaler les actifs périmés"
+            hint="Un équipement d'inventaire automatique sans remontée depuis ce délai est marqué en rouge. Son statut n'est jamais modifié."
+          >
+            <Select
+              className="w-auto"
+              value={settings.assetStaleDays}
+              onChange={(e) => set('assetStaleDays', Number(e.target.value))}
+            >
+              {STALE_CHOICES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </Select>
           </Row>
         </div>
       </Card>
