@@ -1,0 +1,15 @@
+{
+  "name": "parqueo-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Génération des PDF de documentation à la charte Parqueo",
+  "scripts": {
+    "build": "node build-pdf.mjs",
+    "build:web": "node build-web.mjs"
+  },
+  "dependencies": {
+    "marked": "^16.4.1",
+    "playwright-core": "^1.57.0"
+  }
+}
