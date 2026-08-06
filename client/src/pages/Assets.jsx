@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { Badge, Button, Spinner, Card, ErrorText } from '../components/ui.jsx';
+import { Badge, Button, Spinner, Card, ErrorText, ErrorState } from '../components/ui.jsx';
+import { useResource } from '../lib/useResource.js';
 import DataTable from '../components/DataTable.jsx';
 import {
   ASSET_TYPE,
@@ -20,7 +21,6 @@ export default function Assets() {
   const { settings } = useSettings();
   const navigate = useNavigate();
   const staleDays = settings?.assetStaleDays ?? 0;
-  const [assets, setAssets] = useState(null);
   const [creating, setCreating] = useState(false);
   const [config, setConfig] = useState({});
   const [syncing, setSyncing] = useState(null); // 'intune' | 'snmp' | null
@@ -28,8 +28,9 @@ export default function Assets() {
 
   const isStaff = user.role !== 'user';
 
+  const { data: assets, error, reload, set: setAssets } = useResource(() => api.get('/assets'), []);
+
   useEffect(() => {
-    api.get('/assets').then(setAssets);
     // Les boutons de synchro n'apparaissent que si le connecteur est configuré.
     if (user.role === 'admin') api.get('/auth/config').then(setConfig).catch(() => {});
   }, [user.role]);
@@ -171,7 +172,9 @@ export default function Assets() {
       )}
 
       <Card>
-        {assets === null ? (
+        {error ? (
+          <ErrorState error={error} onRetry={reload} />
+        ) : assets === null ? (
           <Spinner />
         ) : (
           <DataTable

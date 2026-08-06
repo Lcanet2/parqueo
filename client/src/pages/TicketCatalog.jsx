@@ -1,17 +1,14 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { Spinner } from '../components/ui.jsx';
+import { useResource } from '../lib/useResource.js';
+import { Spinner, ErrorState } from '../components/ui.jsx';
 import { IconForm, IconPencil, IconChevronRight } from '../components/icons.jsx';
 
 // Catalogue de demandes : formulaires prédéfinis + demande libre.
 export default function TicketCatalog() {
-  const [forms, setForms] = useState(null);
+  const { data: forms, error, reload } = useResource(() => api.get('/forms'), []);
 
-  useEffect(() => {
-    api.get('/forms').then(setForms);
-  }, []);
-
+  if (error) return <ErrorState error={error} onRetry={reload} />;
   if (!forms) return <Spinner />;
 
   return (

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Button, Input, Select, Spinner, Card, EmptyState } from '../components/ui.jsx';
+import { Button, Input, Select, Spinner, Card, EmptyState, ErrorState } from '../components/ui.jsx';
+import { useResource } from '../lib/useResource.js';
 import { Pagination, usePaged } from '../components/Pagination.jsx';
 import { formatDate } from '../lib/labels.js';
 
@@ -13,25 +14,27 @@ export default function Kb() {
   const navigate = useNavigate();
   const isStaff = user.role !== 'user';
 
-  const [articles, setArticles] = useState(null);
   const [q, setQ] = useState('');
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    api.get('/categories').then(setCategories);
+    api.get('/categories').then(setCategories).catch(() => {});
   }, []);
 
   // Recherche avec debounce pour ne pas requêter à chaque frappe.
   useEffect(() => {
     const t = setTimeout(() => {
-      const query = new URLSearchParams();
-      if (q.trim()) query.set('q', q.trim());
-      if (category) query.set('categoryId', category);
-      api.get(`/kb?${query}`).then(setArticles);
+      const p = new URLSearchParams();
+      if (q.trim()) p.set('q', q.trim());
+      if (category) p.set('categoryId', category);
+      setQuery(p.toString());
     }, 300);
     return () => clearTimeout(t);
   }, [q, category]);
+
+  const { data: articles, error, reload } = useResource(() => api.get(`/kb?${query}`), [query]);
 
   const paged = usePaged(articles ?? []);
 
@@ -64,7 +67,9 @@ export default function Kb() {
       </div>
 
       <Card>
-        {articles === null ? (
+        {error ? (
+          <ErrorState error={error} onRetry={reload} />
+        ) : articles === null ? (
           <Spinner />
         ) : articles.length === 0 ? (
           <EmptyState>

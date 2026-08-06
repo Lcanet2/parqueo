@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Button, Input, Select, Textarea, Field, Card, ErrorText, EmptyState, Spinner } from '../components/ui.jsx';
+import {
+  Button,
+  Input,
+  Select,
+  Textarea,
+  Field,
+  Card,
+  ErrorText,
+  ErrorState,
+  EmptyState,
+  Spinner,
+} from '../components/ui.jsx';
 import { parseCsv } from '../lib/csv.js';
 import FormsTab from '../components/FormsTab.jsx';
 import WorkflowsTab from '../components/WorkflowsTab.jsx';
@@ -66,9 +77,14 @@ function UsersTab() {
   const [importError, setImportError] = useState(null);
   const [importing, setImporting] = useState(false);
 
+  const [loadError, setLoadError] = useState(null);
+
   const load = useCallback(() => {
-    api.get('/users').then(setUsers);
-    api.get('/teams').then(setTeams);
+    setLoadError(null);
+    api.get('/users').then(setUsers).catch((err) => setLoadError(err.message));
+    // Les équipes ne servent qu'à remplir un menu : leur échec ne doit pas
+    // masquer la liste des comptes.
+    api.get('/teams').then(setTeams).catch(() => {});
   }, []);
   useEffect(load, [load]);
 
@@ -165,6 +181,7 @@ function UsersTab() {
     }
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (!users) return <Spinner />;
 
   const columns = [
@@ -406,7 +423,7 @@ function SimpleListTab({ endpoint, label, placeholder }) {
   const [error, setError] = useState(null);
 
   const load = useCallback(() => {
-    api.get(endpoint).then(setItems);
+    api.get(endpoint).then(setItems).catch((err) => setError(err.message));
   }, [endpoint]);
   useEffect(load, [load]);
 

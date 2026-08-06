@@ -21,11 +21,10 @@ export default function AssetForm({ asset, onSaved, onCancel }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (user.role === 'admin') {
-      api.get('/users').then(setUsers);
-    } else {
-      api.get('/users/assignable').then(setUsers);
-    }
+    // Liste d'affectation : accessoire. En cas d'échec le menu reste vide,
+    // l'actif peut être créé sans utilisateur assigné.
+    const source = user.role === 'admin' ? '/users' : '/users/assignable';
+    api.get(source).then(setUsers).catch(() => setUsers([]));
   }, [user.role]);
 
   function set(key, value) {

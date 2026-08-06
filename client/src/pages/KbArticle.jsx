@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Button, Input, Select, Textarea, Field, Spinner, ErrorText } from '../components/ui.jsx';
+import { Button, Input, Select, Textarea, Field, Spinner, ErrorText, ErrorState } from '../components/ui.jsx';
 import { formatDate } from '../lib/labels.js';
 
 // Consultation et édition d'un article — /aide/nouveau (création) et /aide/:id.
@@ -21,12 +21,16 @@ export default function KbArticle() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (isStaff) api.get('/categories').then(setCategories);
-  }, [isStaff]);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
+    // Menu de catégories : accessoire, son échec ne bloque pas la lecture.
+    if (isStaff) api.get('/categories').then(setCategories).catch(() => {});
+  }, [isStaff]);
+
+  const loadArticle = useCallback(() => {
     if (isNew) return;
+    setLoadError(null);
     api
       .get(`/kb/${id}`)
       .then((a) => {
@@ -38,8 +42,12 @@ export default function KbArticle() {
           published: a.published,
         });
       })
-      .catch(() => setNotFound(true));
+      // Un 404 est un article qui n'existe pas ou n'est pas publié ; le reste
+      // (panne réseau, erreur serveur) mérite un message distinct et un retry.
+      .catch((err) => (err.status === 404 ? setNotFound(true) : setLoadError(err.message)));
   }, [id, isNew]);
+
+  useEffect(loadArticle, [loadArticle]);
 
   async function save(e) {
     e.preventDefault();
@@ -82,6 +90,7 @@ export default function KbArticle() {
       </div>
     );
   }
+  if (loadError) return <ErrorState error={loadError} onRetry={loadArticle} />;
   if (!isNew && !article) return <Spinner />;
 
   return (

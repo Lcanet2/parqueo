@@ -1,11 +1,26 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { api, getToken, setToken } from '../api/client.js';
+import { api, getToken, setToken, setUnauthorizedHandler } from '../api/client.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Renseigné quand la session est coupée par le serveur : affiché sur l'écran
+  // de connexion pour expliquer le retour au login.
+  const [sessionMessage, setSessionMessage] = useState(null);
+
+  useEffect(() => {
+    // Enregistré avant le premier appel : dès que l'API renvoie 401, la session
+    // est vidée et l'utilisateur renvoyé sur l'écran de connexion.
+    setUnauthorizedHandler(() => {
+      setUser((current) => {
+        if (current) setSessionMessage('Votre session a expiré, reconnectez-vous.');
+        return null;
+      });
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   useEffect(() => {
     // Retour de connexion SSO : le serveur renvoie le jeton dans l'URL. On le
@@ -33,15 +48,17 @@ export function AuthProvider({ children }) {
     const { token, user } = await api.post('/auth/login', { email, password });
     setToken(token);
     setUser(user);
+    setSessionMessage(null);
   }
 
   function logout() {
     setToken(null);
     setUser(null);
+    setSessionMessage(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, sessionMessage }}>
       {children}
     </AuthContext.Provider>
   );

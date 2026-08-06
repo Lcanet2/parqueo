@@ -37,10 +37,15 @@ export default function TicketNew() {
   }, [form.title, kbSuggest]);
 
   useEffect(() => {
-    api.get('/categories').then((cats) => {
-      setCategories(cats);
-      if (cats.length) setForm((f) => ({ ...f, categoryId: f.categoryId || String(cats[0].id) }));
-    });
+    // Sans catégorie, le formulaire ne peut pas aboutir : l'échec doit se voir.
+    api
+      .get('/categories')
+      .then((cats) => {
+        setCategories(cats);
+        if (cats.length) setForm((f) => ({ ...f, categoryId: f.categoryId || String(cats[0].id) }));
+      })
+      .catch((err) => setError(err.message));
+    // L'inventaire peut être fermé à l'utilisateur : champ simplement absent.
     api.get('/assets').then(setAssets).catch(() => setAssets([]));
   }, []);
 

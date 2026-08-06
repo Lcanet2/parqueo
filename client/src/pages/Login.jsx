@@ -6,7 +6,7 @@ import { Button, Input, Field, ErrorText } from '../components/ui.jsx';
 import Brand from '../components/Brand.jsx';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, sessionMessage } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +45,11 @@ export default function Login() {
           </div>
           <p className="text-sm text-ink-soft">Connectez-vous pour continuer</p>
         </div>
+        {sessionMessage && !error && (
+          <p className="mb-4 rounded-md border border-line bg-surface px-3 py-2 text-center text-sm text-ink-soft">
+            {sessionMessage}
+          </p>
+        )}
         <form
           onSubmit={onSubmit}
           className="space-y-4 rounded-lg border border-line bg-surface p-6"

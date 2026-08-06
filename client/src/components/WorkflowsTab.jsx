@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client.js';
-import { Button, Card, ErrorText, EmptyState, Spinner, Badge } from './ui.jsx';
+import { Button, Card, ErrorText, ErrorState, EmptyState, Spinner, Badge } from './ui.jsx';
 import WorkflowCanvas from './WorkflowCanvas.jsx';
 import { TRIGGERS, conditionsSummary } from '../lib/workflowBlocks.js';
 
@@ -28,14 +28,20 @@ export default function WorkflowsTab() {
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState(null);
 
+  const [loadError, setLoadError] = useState(null);
+
   const load = useCallback(() => {
-    api.get('/workflows').then(setWorkflows);
+    setLoadError(null);
+    api.get('/workflows').then(setWorkflows).catch((err) => setLoadError(err.message));
+    // Référentiels des menus de configuration des blocs : accessoires.
     Promise.all([
       api.get('/categories'),
       api.get('/teams'),
       api.get('/users/assignable'),
       api.get('/forms?all=1'),
-    ]).then(([categories, teams, users, forms]) => setRefs({ categories, teams, users, forms }));
+    ])
+      .then(([categories, teams, users, forms]) => setRefs({ categories, teams, users, forms }))
+      .catch(() => {});
   }, []);
   useEffect(load, [load]);
 
@@ -68,6 +74,7 @@ export default function WorkflowsTab() {
     load();
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (!workflows) return <Spinner />;
 
   if (draft) {

@@ -1,20 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { Badge, Card, Spinner, EmptyState } from '../components/ui.jsx';
+import { Badge, Card, Spinner, EmptyState, ErrorState } from '../components/ui.jsx';
+import { useResource } from '../lib/useResource.js';
 import DataTable from '../components/DataTable.jsx';
 import { ASSET_TYPE, ASSET_STATUS } from '../lib/labels.js';
 
 // Catalogue de logiciels du parc (technicien/admin). La liste montre le nombre
 // d'installations ; sélectionner un logiciel détaille les postes concernés.
 export default function Software() {
-  const [list, setList] = useState(null);
+  const { data: list, error, reload } = useResource(() => api.get('/software'), []);
   const [selected, setSelected] = useState(null); // { id, name, publisher, installs: [...] }
   const [loadingDetail, setLoadingDetail] = useState(false);
-
-  useEffect(() => {
-    api.get('/software').then(setList);
-  }, []);
 
   function openSoftware(row) {
     setLoadingDetail(true);
@@ -22,6 +19,7 @@ export default function Software() {
     api
       .get(`/software/${row.id}`)
       .then((s) => setSelected(s))
+      .catch((err) => setSelected({ ...row, installs: [], error: err.message }))
       .finally(() => setLoadingDetail(false));
   }
 
@@ -55,7 +53,9 @@ export default function Software() {
       <h1 className="text-lg font-semibold tracking-tight">Logiciels</h1>
 
       <Card>
-        {list === null ? (
+        {error ? (
+          <ErrorState error={error} onRetry={reload} />
+        ) : list === null ? (
           <Spinner />
         ) : (
           <DataTable

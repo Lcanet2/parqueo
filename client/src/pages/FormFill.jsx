@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { Button, Input, Select, Textarea, Field, ErrorText, Spinner } from '../components/ui.jsx';
+import { Button, Input, Select, Textarea, Field, ErrorText, ErrorState, Spinner } from '../components/ui.jsx';
 
 // Remplissage d'un formulaire de demande prédéfini.
 export default function FormFill() {
@@ -13,9 +13,18 @@ export default function FormFill() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    api.get(`/forms/${id}`).then(setForm).catch(() => setNotFound(true));
+  const [loadError, setLoadError] = useState(null);
+
+  const load = useCallback(() => {
+    setLoadError(null);
+    api
+      .get(`/forms/${id}`)
+      .then(setForm)
+      // 404 = formulaire retiré du catalogue ; le reste est une vraie panne.
+      .catch((err) => (err.status === 404 ? setNotFound(true) : setLoadError(err.message)));
   }, [id]);
+
+  useEffect(load, [load]);
 
   if (notFound) {
     return (
@@ -24,6 +33,7 @@ export default function FormFill() {
       </p>
     );
   }
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (!form) return <Spinner />;
 
   function set(fieldId, value) {

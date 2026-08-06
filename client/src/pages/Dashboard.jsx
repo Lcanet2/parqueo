@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Button, Select, Spinner } from '../components/ui.jsx';
+import { useResource } from '../lib/useResource.js';
+import { Button, Select, Spinner, ErrorState } from '../components/ui.jsx';
 import { WIDGET_COMPONENTS } from '../components/widgets.jsx';
 import {
   CATALOG,
@@ -25,7 +26,6 @@ const ROLE_TABS = [
 export default function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user.role === 'admin';
-  const [tickets, setTickets] = useState(null);
   const [assets, setAssets] = useState(null);
   const [items, setItems] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -42,8 +42,15 @@ export default function Dashboard() {
   const itemsRef = useRef(null);
   itemsRef.current = items;
 
+  // Les tickets alimentent toutes les métriques : leur échec doit être visible.
+  const { data: tickets, error: ticketsError, reload: reloadTickets } = useResource(
+    () => api.get('/tickets'),
+    []
+  );
+
+  // L'inventaire peut être fermé aux utilisateurs finals : une erreur ici n'est
+  // pas anormale, on retombe sur une liste vide.
   useEffect(() => {
-    api.get('/tickets').then(setTickets);
     api.get('/assets').then(setAssets).catch(() => setAssets([]));
   }, []);
 
@@ -62,7 +69,8 @@ export default function Dashboard() {
   }, [user, isAdmin]);
 
   // Admin : enregistré pour le rôle édité, appliqué à tous ses comptes.
-  // Non-admin autorisé : layout personnel local, visible de lui seul.
+  // Non-admin autorisé : layout personnel stocké en base, visible de lui seul
+  // mais retrouvé sur tous ses appareils.
   function update(next) {
     setItems(next);
     persist(next);
@@ -112,7 +120,10 @@ export default function Dashboard() {
     setEditRole(role);
     setConfiguring(null);
     setItems(null);
-    api.get(`/settings/dashboard?role=${role}`).then(({ layout }) => setItems(sanitizeLayout(layout, role)));
+    api
+      .get(`/settings/dashboard?role=${role}`)
+      .then(({ layout }) => setItems(sanitizeLayout(layout, role)))
+      .catch(() => setItems(defaultLayout(role)));
   }
 
   async function resetCurrent() {
@@ -166,6 +177,7 @@ export default function Dashboard() {
     setAdding(false);
   }
 
+  if (ticketsError) return <ErrorState error={ticketsError} onRetry={reloadTickets} />;
   if (!tickets || !assets || !items) return <Spinner />;
   const data = { tickets, assets, user };
 
@@ -209,8 +221,9 @@ export default function Dashboard() {
               </>
             ) : (
               <span className="text-xs text-ink-faint">
-                Personnalisation personnelle — visible uniquement par vous, sur ce navigateur.
-                « Réinitialiser » revient au tableau de bord défini par l'administration.
+                Personnalisation personnelle — visible uniquement par vous, sur tous vos
+                appareils. « Réinitialiser » revient au tableau de bord défini par
+                l'administration.
               </span>
             )}
           </div>

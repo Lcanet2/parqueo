@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Button, Input, Select, Spinner, Card } from '../components/ui.jsx';
+import { useResource } from '../lib/useResource.js';
+import { Button, Input, Select, Spinner, Card, ErrorState } from '../components/ui.jsx';
 import TicketTable from '../components/TicketTable.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../lib/labels.js';
 
@@ -36,7 +37,6 @@ function parseSort(sortParam) {
 export default function Tickets() {
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
-  const [data, setData] = useState(null); // { items, total, counts }
   const [counts, setCounts] = useState(null); // conservés pendant les rechargements pour éviter le clignotement des chips
   const [search, setSearch] = useState(params.get('q') ?? '');
   const [categories, setCategories] = useState([]);
@@ -57,33 +57,37 @@ export default function Tickets() {
   const isAll = pageSize === 'all';
   const size = isAll ? 0 : Number(pageSize);
 
+  // Listes de référence des filtres : leur échec ne bloque pas la page, il vide
+  // simplement le menu concerné — la liste principale porte le message d'erreur.
   useEffect(() => {
-    api.get('/categories').then(setCategories);
+    api.get('/categories').then(setCategories).catch(() => {});
     if (isStaff) {
-      api.get('/teams').then(setTeams);
-      api.get('/users/assignable').then(setAssignables);
+      api.get('/teams').then(setTeams).catch(() => {});
+      api.get('/users/assignable').then(setAssignables).catch(() => {});
     }
   }, [isStaff]);
 
-  // Liste paginée côté serveur ; la réponse inclut les compteurs par statut pour les chips.
-  useEffect(() => {
-    const query = new URLSearchParams();
-    if (status) query.set('status', status);
-    if (priority) query.set('priority', priority);
-    if (assignee === 'me') query.set('assigneeId', user.id);
-    else if (assignee) query.set('assigneeId', assignee);
-    if (category) query.set('categoryId', category);
-    if (team) query.set('teamId', team);
-    if (sort) query.set('sort', sort);
-    if (q) query.set('q', q);
-    query.set('page', page);
-    query.set('pageSize', pageSize);
-    setData(null);
-    api.get(`/tickets?${query}`).then((d) => {
-      setData(d);
-      setCounts(d.counts);
-    });
+  const query = useMemo(() => {
+    const p = new URLSearchParams();
+    if (status) p.set('status', status);
+    if (priority) p.set('priority', priority);
+    if (assignee === 'me') p.set('assigneeId', user.id);
+    else if (assignee) p.set('assigneeId', assignee);
+    if (category) p.set('categoryId', category);
+    if (team) p.set('teamId', team);
+    if (sort) p.set('sort', sort);
+    if (q) p.set('q', q);
+    p.set('page', page);
+    p.set('pageSize', pageSize);
+    return p.toString();
   }, [status, priority, assignee, category, team, sort, q, page, pageSize, user.id]);
+
+  // Liste paginée côté serveur ; la réponse inclut les compteurs par statut pour les chips.
+  const { data, error, loading, reload } = useResource(() => api.get(`/tickets?${query}`), [query]);
+
+  useEffect(() => {
+    if (data?.counts) setCounts(data.counts);
+  }, [data]);
 
   // Tri par colonne (piloté par les en-têtes de TicketTable). Le tri s'applique
   // à l'ensemble du jeu côté serveur ; le reset (next === null) revient au défaut.
@@ -105,7 +109,7 @@ export default function Tickets() {
   }
 
   const hasFilters = priority || assignee || category || team || q;
-  const visible = data?.items ?? null;
+  const visible = loading || error ? null : data?.items ?? null;
   const totalAll = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
 
   const chips = [
@@ -217,7 +221,9 @@ export default function Tickets() {
       </div>
 
       <Card>
-        {visible === null ? (
+        {error ? (
+          <ErrorState error={error} onRetry={reload} />
+        ) : visible === null ? (
           <Spinner />
         ) : (
           <>

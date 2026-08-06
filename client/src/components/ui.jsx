@@ -116,6 +116,21 @@ export function ErrorText({ children }) {
   return <p className="text-sm text-accent">{children}</p>;
 }
 
+// Échec de chargement d'une page : message explicite et bouton de reprise,
+// plutôt qu'un spinner qui tourne dans le vide.
+export function ErrorState({ error, onRetry }) {
+  return (
+    <div className="px-4 py-10 text-center">
+      <p className="text-sm text-accent">{error}</p>
+      {onRetry && (
+        <div className="mt-3">
+          <Button onClick={onRetry}>Réessayer</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Spinner() {
   return (
     <div className="flex justify-center py-12">

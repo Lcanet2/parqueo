@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client.js';
-import { Button, Input, Select, Textarea, Field, Card, ErrorText, EmptyState, Spinner, Badge } from './ui.jsx';
+import { Button, Input, Select, Textarea, Field, Card, ErrorText, ErrorState, EmptyState, Spinner, Badge } from './ui.jsx';
 import { TICKET_PRIORITY } from '../lib/labels.js';
 
 const FIELD_TYPES = [
@@ -44,9 +44,13 @@ export default function FormsTab() {
   const [draft, setDraft] = useState(null); // null = pas d'édition en cours
   const [error, setError] = useState(null);
 
+  const [loadError, setLoadError] = useState(null);
+
   const load = useCallback(() => {
-    api.get('/forms?all=1').then(setForms);
-    api.get('/categories').then(setCategories);
+    setLoadError(null);
+    api.get('/forms?all=1').then(setForms).catch((err) => setLoadError(err.message));
+    // Menu de catégories : accessoire, il ne conditionne pas l'affichage.
+    api.get('/categories').then(setCategories).catch(() => {});
   }, []);
   useEffect(load, [load]);
 
@@ -108,6 +112,7 @@ export default function FormsTab() {
     load();
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (!forms) return <Spinner />;
 
   if (draft) {

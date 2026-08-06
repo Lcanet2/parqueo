@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Badge, Button, Spinner, Card, EmptyState, ErrorText } from '../components/ui.jsx';
+import { Badge, Button, Spinner, Card, EmptyState, ErrorText, ErrorState } from '../components/ui.jsx';
 import AssetForm from '../components/AssetForm.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
 import {
@@ -34,8 +34,16 @@ export default function AssetDetail() {
 
   const isStaff = user.role !== 'user';
 
+  const [loadError, setLoadError] = useState(null);
+
   const load = useCallback(() => {
-    api.get(`/assets/${id}`).then(setAsset).catch(() => setNotFound(true));
+    setLoadError(null);
+    api
+      .get(`/assets/${id}`)
+      .then(setAsset)
+      // 404 = actif inexistant ou invisible ; toute autre erreur (réseau,
+      // serveur) mérite son propre message plutôt qu'un « introuvable » trompeur.
+      .catch((err) => (err.status === 404 ? setNotFound(true) : setLoadError(err.message)));
   }, [id]);
 
   useEffect(load, [load]);
@@ -47,6 +55,7 @@ export default function AssetDetail() {
       </p>
     );
   }
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (!asset) return <Spinner />;
 
   async function remove() {
