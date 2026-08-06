@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import multer from 'multer';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -8,6 +8,7 @@ import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { visibilityWhere } from '../lib/visibility.js';
 import { getAppSettings } from '../lib/appSettings.js';
+import { text } from '../lib/input.js';
 import { onTicketCreated, onTicketUpdated } from '../services/workflowEngine.js';
 import { describeGate } from '../lib/workflowUtils.js';
 import { STATUS_LABELS } from '../lib/labels.js';
@@ -214,9 +215,11 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { title, description, priority, categoryId, assetId } = req.body;
+  const { priority, categoryId, assetId } = req.body;
+  const title = text(req.body.title);
+  const description = text(req.body.description);
 
-  if (!title?.trim() || !description?.trim() || !categoryId) {
+  if (!title || !description || !categoryId) {
     return res.status(400).json({ error: 'Titre, description et catégorie requis' });
   }
   if (priority && !PRIORITIES.includes(priority)) {
@@ -233,8 +236,8 @@ router.post('/', async (req, res) => {
 
   let ticket = await prisma.ticket.create({
     data: {
-      title: title.trim(),
-      description: description.trim(),
+      title,
+      description,
       priority: (canSetPriority && priority) || settings.ticketDefaultPriority,
       categoryId: category.id,
       authorId: req.user.sub,
@@ -294,8 +297,8 @@ router.patch('/:id', requireRole('admin', 'technician'), async (req, res) => {
   if (categoryId !== undefined) data.categoryId = Number(categoryId);
   if (teamId !== undefined) data.teamId = teamId === null ? null : Number(teamId);
   if (assetId !== undefined) data.assetId = assetId === null ? null : Number(assetId);
-  if (title !== undefined && title.trim()) data.title = title.trim();
-  if (description !== undefined && description.trim()) data.description = description.trim();
+  if (title !== undefined && text(title)) data.title = text(title);
+  if (description !== undefined && text(description)) data.description = text(description);
 
   if (Object.keys(data).length === 0) {
     return res.json(existing);
@@ -342,15 +345,15 @@ router.post('/:id/comments', async (req, res) => {
   const ticket = await findVisibleTicket(id, req.user);
   if (!ticket) return res.status(404).json({ error: 'Ticket introuvable' });
 
-  const { body } = req.body;
-  if (!body?.trim()) return res.status(400).json({ error: 'Commentaire vide' });
+  const body = text(req.body.body);
+  if (!body) return res.status(400).json({ error: 'Commentaire vide' });
 
   const comment = await prisma.ticketComment.create({
     data: {
       ticketId: id,
       authorId: req.user.sub,
       type: 'comment',
-      body: body.trim(),
+      body,
     },
     include: { author: { select: { id: true, name: true } } },
   });

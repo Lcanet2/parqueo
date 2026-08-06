@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { WORKFLOW_TRIGGERS, STEP_TYPES } from '../services/workflowEngine.js';
+import { text } from '../lib/input.js';
 
 const router = Router();
 
@@ -66,13 +67,14 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, trigger } = req.body;
-  if (!name?.trim()) return res.status(400).json({ error: 'Nom requis' });
+  const { trigger } = req.body;
+  const name = text(req.body.name);
+  if (!name) return res.status(400).json({ error: 'Nom requis' });
   if (!WORKFLOW_TRIGGERS.includes(trigger)) return res.status(400).json({ error: 'Déclencheur invalide' });
 
   const last = await prisma.workflow.findFirst({ orderBy: { position: 'desc' } });
   const workflow = await prisma.workflow.create({
-    data: { name: name.trim(), trigger, position: (last?.position ?? 0) + 1 },
+    data: { name, trigger, position: (last?.position ?? 0) + 1 },
     include: workflowInclude,
   });
   res.status(201).json(workflow);
@@ -84,8 +86,9 @@ router.put('/:id', async (req, res) => {
   const existing = await prisma.workflow.findUnique({ where: { id } });
   if (!existing) return res.status(404).json({ error: 'Workflow introuvable' });
 
-  const { name, active, trigger, conditions, steps, layout } = req.body;
-  if (!name?.trim()) return res.status(400).json({ error: 'Nom requis' });
+  const { active, trigger, conditions, steps, layout } = req.body;
+  const name = text(req.body.name);
+  if (!name) return res.status(400).json({ error: 'Nom requis' });
   if (!WORKFLOW_TRIGGERS.includes(trigger)) return res.status(400).json({ error: 'Déclencheur invalide' });
   const stepError = validateSteps(steps ?? []);
   if (stepError) return res.status(400).json({ error: stepError });
@@ -97,7 +100,7 @@ router.put('/:id', async (req, res) => {
     prisma.workflow.update({
       where: { id },
       data: {
-        name: name.trim(),
+        name,
         active: active !== false,
         trigger,
         conditions: cleanConditions(conditions),

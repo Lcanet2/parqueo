@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { getAppSettings } from '../lib/appSettings.js';
+import { text } from '../lib/input.js';
 
 const router = Router();
 
@@ -71,8 +72,8 @@ function parseAssetBody(body, { partial = false } = {}) {
   const data = {};
 
   if (!partial || name !== undefined) {
-    if (!name?.trim()) errors.push('Nom requis');
-    else data.name = name.trim();
+    if (!text(name)) errors.push('Nom requis');
+    else data.name = text(name);
   }
   if (!partial || type !== undefined) {
     if (!TYPES.includes(type)) errors.push(`Type invalide (${TYPES.join(', ')})`);
@@ -82,7 +83,7 @@ function parseAssetBody(body, { partial = false } = {}) {
     if (!STATUSES.includes(status)) errors.push(`Statut invalide (${STATUSES.join(', ')})`);
     else data.status = status;
   }
-  if (location !== undefined) data.location = location?.trim() || null;
+  if (location !== undefined) data.location = text(location) || null;
   if (purchaseDate !== undefined) {
     if (purchaseDate === null || purchaseDate === '') data.purchaseDate = null;
     else {

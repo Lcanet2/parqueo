@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { onTicketCreated } from '../services/workflowEngine.js';
 import { notifyTicketCreated } from '../services/mailer.js';
+import { text } from '../lib/input.js';
 
 const router = Router();
 
@@ -110,7 +111,7 @@ router.post('/:id/submit', async (req, res) => {
 function validateFields(fields) {
   if (!Array.isArray(fields)) return 'Liste de champs invalide';
   for (const f of fields) {
-    if (!f.label?.trim()) return 'Chaque champ doit avoir un libellé';
+    if (!text(f?.label)) return 'Chaque champ doit avoir un libellé';
     if (!FIELD_TYPES.includes(f.type)) return `Type de champ invalide (${FIELD_TYPES.join(', ')})`;
     if (f.type === 'select') {
       const opts = Array.isArray(f.options) ? f.options.filter((o) => String(o).trim()) : [];
@@ -123,7 +124,7 @@ function validateFields(fields) {
 const toFieldRows = (fields, formId) =>
   fields.map((f, i) => ({
     formId,
-    label: f.label.trim(),
+    label: text(f.label),
     type: f.type,
     required: Boolean(f.required),
     options: f.type === 'select' ? JSON.stringify(f.options.map((o) => String(o).trim())) : null,
@@ -133,9 +134,11 @@ const toFieldRows = (fields, formId) =>
 router.use(requireRole('admin'));
 
 router.post('/', async (req, res) => {
-  const { name, description, categoryId, priority, active, fields = [] } = req.body;
+  const { categoryId, priority, active, fields = [] } = req.body;
+  const name = text(req.body.name);
+  const description = text(req.body.description);
 
-  if (!name?.trim()) return res.status(400).json({ error: 'Nom requis' });
+  if (!name) return res.status(400).json({ error: 'Nom requis' });
   const category = await prisma.category.findUnique({ where: { id: Number(categoryId) } });
   if (!category) return res.status(400).json({ error: 'Catégorie inconnue' });
   if (priority && !['low', 'medium', 'high'].includes(priority)) {
@@ -146,8 +149,8 @@ router.post('/', async (req, res) => {
 
   const form = await prisma.form.create({
     data: {
-      name: name.trim(),
-      description: description?.trim() || null,
+      name,
+      description: description || null,
       categoryId: category.id,
       priority: priority || 'medium',
       active: active !== false,
@@ -167,8 +170,8 @@ router.patch('/:id', async (req, res) => {
   const { name, description, categoryId, priority, active, fields } = req.body;
   const data = {};
 
-  if (name !== undefined && name.trim()) data.name = name.trim();
-  if (description !== undefined) data.description = description?.trim() || null;
+  if (name !== undefined && text(name)) data.name = text(name);
+  if (description !== undefined) data.description = text(description) || null;
   if (categoryId !== undefined) {
     const category = await prisma.category.findUnique({ where: { id: Number(categoryId) } });
     if (!category) return res.status(400).json({ error: 'Catégorie inconnue' });

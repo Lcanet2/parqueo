@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
+import { text } from '../lib/input.js';
 
 const router = Router();
 
@@ -40,9 +41,11 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { email, password, name, role, teamId } = req.body;
+  const { password, role, teamId } = req.body;
+  const email = text(req.body.email).toLowerCase();
+  const name = text(req.body.name);
 
-  if (!email?.trim() || !password || !name?.trim()) {
+  if (!email || typeof password !== 'string' || !name) {
     return res.status(400).json({ error: 'Email, mot de passe et nom requis' });
   }
   if (password.length < 8) {
@@ -52,14 +55,14 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Rôle invalide' });
   }
 
-  const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ error: 'Cet email existe déjà' });
 
   const user = await prisma.user.create({
     data: {
-      email: email.trim().toLowerCase(),
+      email,
       passwordHash: await bcrypt.hash(password, 10),
-      name: name.trim(),
+      name,
       role: role || 'user',
       teamId: teamId ? Number(teamId) : null,
     },
@@ -135,9 +138,9 @@ router.patch('/:id', async (req, res) => {
   const { name, email, role, teamId, password } = req.body;
   const data = {};
 
-  if (name !== undefined && name.trim()) data.name = name.trim();
+  if (name !== undefined && text(name)) data.name = text(name);
   if (email !== undefined) {
-    const normalized = email.trim().toLowerCase();
+    const normalized = text(email).toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) {
       return res.status(400).json({ error: 'Adresse email invalide' });
     }
@@ -154,7 +157,9 @@ router.patch('/:id', async (req, res) => {
   }
   if (teamId !== undefined) data.teamId = teamId === null ? null : Number(teamId);
   if (password !== undefined) {
-    if (password.length < 8) return res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' });
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' });
+    }
     data.passwordHash = await bcrypt.hash(password, 10);
   }
 

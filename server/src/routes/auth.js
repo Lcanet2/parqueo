@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
@@ -14,6 +14,7 @@ import {
 } from '../services/oidc.js';
 import { intuneEnabled } from '../services/intune.js';
 import { snmpEnabled } from '../services/snmp.js';
+import { text } from '../lib/input.js';
 
 const router = Router();
 
@@ -37,9 +38,12 @@ router.get('/config', (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  // Les comptes sont stockés en minuscules (création, import, SSO) : on
+  // normalise à l'identique, sinon « Admin@… » ne peut pas se connecter.
+  const email = text(req.body.email).toLowerCase();
+  const { password } = req.body;
 
-  if (!email || !password) {
+  if (!email || typeof password !== 'string' || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis' });
   }
 
@@ -135,6 +139,41 @@ router.get('/me', authRequired, async (req, res) => {
     return res.status(404).json({ error: 'Utilisateur introuvable' });
   }
   res.json(toPublicUser(user));
+});
+
+// Changement de mot de passe par le titulaire du compte — jusqu'ici seul un
+// admin pouvait le faire, ce qui obligeait à ouvrir un ticket pour ça.
+// L'ancien mot de passe est exigé : un poste laissé déverrouillé ne doit pas
+// suffire à confisquer le compte.
+router.patch('/password', authRequired, async (req, res) => {
+  const { currentPassword, newPassword } = req.body ?? {};
+
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+    return res.status(400).json({ error: 'Mot de passe actuel et nouveau mot de passe requis' });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+  if (!user.passwordHash) {
+    return res.status(400).json({
+      error: 'Ce compte utilise la connexion Microsoft : le mot de passe se change côté Microsoft.',
+    });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' });
+  }
+  if (newPassword === currentPassword) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe doit être différent de l’ancien' });
+  }
+  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    return res.status(400).json({ error: 'Mot de passe actuel incorrect' });
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(newPassword, 10) },
+  });
+  res.json({ ok: true });
 });
 
 export default router;

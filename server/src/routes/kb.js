@@ -1,7 +1,8 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { getAppSettings } from '../lib/appSettings.js';
+import { text } from '../lib/input.js';
 
 const router = Router();
 
@@ -28,8 +29,8 @@ router.get('/', async (req, res) => {
 
   if (req.user.role === 'user') where.published = true;
   if (categoryId) where.categoryId = Number(categoryId) || undefined;
-  if (q?.trim()) {
-    const words = q.trim().split(/\s+/).filter((w) => w.length >= 3).slice(0, 8);
+  if (text(q)) {
+    const words = text(q).split(/\s+/).filter((w) => w.length >= 3).slice(0, 8);
     if (words.length) {
       where.OR = words.flatMap((w) => [
         { title: { contains: w, mode: 'insensitive' } },
@@ -60,14 +61,16 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', canWriteKb, async (req, res) => {
-  const { title, body, categoryId, published } = req.body;
-  if (!title?.trim() || !body?.trim()) {
+  const { categoryId, published } = req.body;
+  const title = text(req.body.title);
+  const body = text(req.body.body);
+  if (!title || !body) {
     return res.status(400).json({ error: 'Titre et contenu requis' });
   }
   const article = await prisma.kbArticle.create({
     data: {
-      title: title.trim(),
-      body: body.trim(),
+      title,
+      body,
       categoryId: categoryId ? Number(categoryId) : null,
       published: published !== false,
       authorId: req.user.sub,
@@ -84,8 +87,8 @@ router.patch('/:id', canWriteKb, async (req, res) => {
 
   const { title, body, categoryId, published } = req.body;
   const data = {};
-  if (title !== undefined && title.trim()) data.title = title.trim();
-  if (body !== undefined && body.trim()) data.body = body.trim();
+  if (title !== undefined && text(title)) data.title = text(title);
+  if (body !== undefined && text(body)) data.body = text(body);
   if (categoryId !== undefined) data.categoryId = categoryId === null ? null : Number(categoryId);
   if (published !== undefined) data.published = Boolean(published);
 

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from '../lib/router.js';
 import express from 'express';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';

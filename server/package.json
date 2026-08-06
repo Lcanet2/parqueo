@@ -8,6 +8,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "test": "node --test 'src/**/*.test.js'",
+    "test:api": "node --test --test-concurrency=1 'test/**/*.test.js'",
+    "test:all": "npm test && npm run test:api",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js"
