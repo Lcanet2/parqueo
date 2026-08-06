@@ -42,9 +42,10 @@ export default function Dashboard() {
   const itemsRef = useRef(null);
   itemsRef.current = items;
 
-  // Les tickets alimentent toutes les métriques : leur échec doit être visible.
-  const { data: tickets, error: ticketsError, reload: reloadTickets } = useResource(
-    () => api.get('/tickets'),
+  // Agrégats calculés en SQL : quelques kilo-octets, au lieu de l'intégralité
+  // des tickets visibles (5 Mo à 10 000 tickets, à chaque chargement).
+  const { data: stats, error: statsError, reload: reloadStats } = useResource(
+    () => api.get('/tickets/stats'),
     []
   );
 
@@ -177,9 +178,9 @@ export default function Dashboard() {
     setAdding(false);
   }
 
-  if (ticketsError) return <ErrorState error={ticketsError} onRetry={reloadTickets} />;
-  if (!tickets || !assets || !items) return <Spinner />;
-  const data = { tickets, assets, user };
+  if (statsError) return <ErrorState error={statsError} onRetry={reloadStats} />;
+  if (!stats || !assets || !items) return <Spinner />;
+  const data = { stats, assets, user };
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">

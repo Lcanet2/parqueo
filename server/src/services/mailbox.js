@@ -5,6 +5,8 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { prisma } from '../lib/prisma.js';
 import { extractTicketId, stripQuotedReply, bareAddress } from '../lib/inbound.js';
+import { visibilityWhere } from '../lib/visibility.js';
+import { LIMITS, tronque } from '../lib/input.js';
 import { onTicketCreated } from './workflowEngine.js';
 import { notifyTicketCreated, notifyCommentAdded } from './mailer.js';
 
@@ -45,13 +47,20 @@ export async function handleIncomingEmail({ fromAddress, subject = '', text = ''
     return { action: 'ignored', reason: 'expéditeur inconnu' };
   }
 
-  const body = stripQuotedReply(text) || '(message vide)';
+  // Un email peut être arbitrairement long : on borne comme la saisie web.
+  const body = tronque(stripQuotedReply(text), LIMITS.commentaire) || '(message vide)';
 
-  // Réponse à un ticket existant → commentaire.
+  // Réponse à un ticket existant → commentaire. La visibilité est celle de
+  // l'expéditeur, exactement comme dans l'interface : sans ce filtre, il
+  // suffisait de connaître un numéro de ticket pour y écrire depuis n'importe
+  // quel compte connu (et l'adresse d'expédition n'est pas authentifiée).
   const ticketId = extractTicketId(subject);
   if (ticketId) {
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
+    const ticket = await prisma.ticket.findFirst({
+      where: {
+        id: ticketId,
+        ...visibilityWhere({ sub: user.id, role: user.role, teamId: user.teamId }),
+      },
       include: {
         author: { select: { id: true, name: true, email: true } },
         assignee: { select: { id: true, name: true, email: true } },
@@ -67,6 +76,9 @@ export async function handleIncomingEmail({ fromAddress, subject = '', text = ''
       console.log(`[collecteur] réponse de ${sender} ajoutée au ticket #${ticket.id}`);
       return { action: 'comment', ticketId: ticket.id };
     }
+    // Ticket inexistant ou hors de sa visibilité : on ne jette pas le message,
+    // il devient une demande à part entière traitée ci-dessous.
+    console.log(`[collecteur] ticket #${ticketId} inaccessible à ${sender} — nouvelle demande`);
   }
 
   // Sinon → nouveau ticket dans la catégorie IMAP_CATEGORY_ID (ou la première).
@@ -81,7 +93,7 @@ export async function handleIncomingEmail({ fromAddress, subject = '', text = ''
 
   let ticket = await prisma.ticket.create({
     data: {
-      title: subject.trim() || 'Demande reçue par email',
+      title: tronque(subject.trim(), LIMITS.titre) || 'Demande reçue par email',
       description: body,
       priority: 'medium',
       categoryId: category.id,

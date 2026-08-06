@@ -1,6 +1,7 @@
 import { Router } from '../lib/router.js';
 import multer from 'multer';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
@@ -8,7 +9,8 @@ import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { visibilityWhere } from '../lib/visibility.js';
 import { getAppSettings } from '../lib/appSettings.js';
-import { text } from '../lib/input.js';
+import { text, tropLong, LIMITS, entierBorne } from '../lib/input.js';
+import { ticketStats, ticketListes } from '../lib/stats.js';
 import { onTicketCreated, onTicketUpdated } from '../services/workflowEngine.js';
 import { describeGate } from '../lib/workflowUtils.js';
 import { STATUS_LABELS } from '../lib/labels.js';
@@ -163,8 +165,8 @@ router.get('/', async (req, res) => {
 
   // pageSize peut valoir « all » (tout afficher) ou un nombre borné à 500.
   const all = pageSize === 'all';
-  const take = all ? undefined : Math.min(Math.max(Number(pageSize) || 25, 1), 500);
-  const skip = all ? 0 : (Math.max(Number(page) || 1, 1) - 1) * take;
+  const take = all ? undefined : entierBorne(pageSize, { defaut: 25, min: 1, max: 500 });
+  const skip = all ? 0 : (entierBorne(page) - 1) * take;
 
   // counts est calculé hors filtre statut : les chips affichent toujours tous les statuts.
   const grouped = await prisma.ticket.groupBy({ by: ['status'], where, _count: true });
@@ -179,6 +181,17 @@ router.get('/', async (req, res) => {
     ...(all ? {} : { skip, take }),
   });
   res.json({ items, total, counts });
+});
+
+// Agrégats du tableau de bord : tout est compté en SQL, dans les limites de
+// visibilité du demandeur. Remplace le téléchargement intégral des tickets.
+router.get('/stats', async (req, res) => {
+  const where = visibilityWhere(req.user);
+  const [stats, listes] = await Promise.all([
+    ticketStats(where, req.user),
+    ticketListes(where, req.user),
+  ]);
+  res.json({ ...stats, listes });
 });
 
 router.get('/:id', async (req, res) => {
@@ -222,12 +235,29 @@ router.post('/', async (req, res) => {
   if (!title || !description || !categoryId) {
     return res.status(400).json({ error: 'Titre, description et catégorie requis' });
   }
+  const trop = tropLong({ Titre: [title, LIMITS.titre], Description: [description, LIMITS.description] });
+  if (trop) return res.status(400).json({ error: trop });
   if (priority && !PRIORITIES.includes(priority)) {
     return res.status(400).json({ error: 'Priorité invalide' });
   }
 
   const category = await prisma.category.findUnique({ where: { id: Number(categoryId) } });
   if (!category) return res.status(400).json({ error: 'Catégorie inconnue' });
+
+  // Actif rattaché : un utilisateur final ne peut désigner que le sien. Sans ce
+  // contrôle, n'importe qui pouvait rattacher son ticket à un actif arbitraire
+  // et en lire le nom dans la réponse — soit l'inventaire complet, par
+  // énumération d'identifiants.
+  if (assetId) {
+    const asset = await prisma.asset.findFirst({
+      where: {
+        id: Number(assetId) || 0,
+        ...(req.user.role === 'user' ? { assignedUserId: req.user.sub } : {}),
+      },
+      select: { id: true },
+    });
+    if (!asset) return res.status(400).json({ error: 'Actif inconnu' });
+  }
 
   // La priorité choisie par un simple utilisateur n'est prise en compte que si
   // le paramètre l'autorise ; sinon c'est la priorité par défaut qui s'applique.
@@ -300,6 +330,12 @@ router.patch('/:id', requireRole('admin', 'technician'), async (req, res) => {
   if (title !== undefined && text(title)) data.title = text(title);
   if (description !== undefined && text(description)) data.description = text(description);
 
+  const tropLongPatch = tropLong({
+    Titre: [data.title, LIMITS.titre],
+    Description: [data.description, LIMITS.description],
+  });
+  if (tropLongPatch) return res.status(400).json({ error: tropLongPatch });
+
   if (Object.keys(data).length === 0) {
     return res.json(existing);
   }
@@ -347,6 +383,8 @@ router.post('/:id/comments', async (req, res) => {
 
   const body = text(req.body.body);
   if (!body) return res.status(400).json({ error: 'Commentaire vide' });
+  const tropLongCom = tropLong({ Commentaire: [body, LIMITS.commentaire] });
+  if (tropLongCom) return res.status(400).json({ error: tropLongCom });
 
   const comment = await prisma.ticketComment.create({
     data: {
@@ -395,6 +433,56 @@ router.get('/:id/attachments/:attachmentId', async (req, res) => {
   if (!attachment) return res.status(404).json({ error: 'Pièce jointe introuvable' });
 
   res.download(path.resolve(attachment.storedPath), attachment.filename);
+});
+
+// Supprime les fichiers d'une liste de pièces jointes. Un fichier déjà absent
+// n'est pas une erreur : la ligne en base fait foi.
+async function effacerFichiers(attachments) {
+  for (const a of attachments) {
+    try {
+      await fs.unlink(path.resolve(a.storedPath));
+    } catch (err) {
+      if (err.code !== 'ENOENT') console.error(`[pièces jointes] ${a.storedPath} :`, err.message);
+    }
+  }
+}
+
+// Suppression définitive d'un ticket (droit à l'effacement). Les commentaires,
+// pièces jointes et exécutions de workflow partent en cascade ; les fichiers sur
+// disque sont retirés ici, sans quoi ils resteraient orphelins pour toujours.
+router.delete('/:id', requireRole('admin'), async (req, res) => {
+  const id = Number(req.params.id);
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    include: { attachments: { select: { storedPath: true } } },
+  });
+  if (!ticket) return res.status(404).json({ error: 'Ticket introuvable' });
+
+  await prisma.ticket.delete({ where: { id } });
+  await effacerFichiers(ticket.attachments);
+  console.log(`[tickets] #${id} supprimé par l'utilisateur ${req.user.sub}`);
+  res.status(204).end();
+});
+
+// Suppression d'une pièce jointe : le support, ou celui qui l'a envoyée.
+router.delete('/:id/attachments/:attachmentId', async (req, res) => {
+  const id = Number(req.params.id);
+  const ticket = await findVisibleTicket(id, req.user);
+  if (!ticket) return res.status(404).json({ error: 'Ticket introuvable' });
+
+  const attachment = await prisma.attachment.findFirst({
+    where: { id: Number(req.params.attachmentId), ticketId: id },
+  });
+  if (!attachment) return res.status(404).json({ error: 'Pièce jointe introuvable' });
+
+  const estStaff = req.user.role !== 'user';
+  if (!estStaff && attachment.uploadedBy !== req.user.sub) {
+    return res.status(403).json({ error: 'Seul l’auteur de l’envoi peut retirer cette pièce jointe' });
+  }
+
+  await prisma.attachment.delete({ where: { id: attachment.id } });
+  await effacerFichiers([attachment]);
+  res.status(204).end();
 });
 
 export default router;

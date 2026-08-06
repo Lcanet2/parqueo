@@ -77,7 +77,7 @@ model User {
 
 model Team {
   id   Int    @id @default(autoincrement())
-  name String
+  name String @unique
 
   members       User[]
   tickets       Ticket[]
@@ -87,7 +87,9 @@ model Team {
 
 model Category {
   id   Int    @id @default(autoincrement())
-  name String
+  // Unique : deux catégories homonymes rendaient les filtres et les conditions
+  // de workflow ambigus, sans moyen de les distinguer dans l'interface.
+  name String @unique
 
   tickets       Ticket[]
   forms         Form[]

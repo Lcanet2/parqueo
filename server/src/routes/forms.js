@@ -4,7 +4,7 @@ import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { onTicketCreated } from '../services/workflowEngine.js';
 import { notifyTicketCreated } from '../services/mailer.js';
-import { text } from '../lib/input.js';
+import { text, tropLong, LIMITS } from '../lib/input.js';
 
 const router = Router();
 
@@ -112,6 +112,7 @@ function validateFields(fields) {
   if (!Array.isArray(fields)) return 'Liste de champs invalide';
   for (const f of fields) {
     if (!text(f?.label)) return 'Chaque champ doit avoir un libellé';
+    if (text(f.label).length > LIMITS.libelle) return `Libellé de champ : ${LIMITS.libelle} caractères maximum`;
     if (!FIELD_TYPES.includes(f.type)) return `Type de champ invalide (${FIELD_TYPES.join(', ')})`;
     if (f.type === 'select') {
       const opts = Array.isArray(f.options) ? f.options.filter((o) => String(o).trim()) : [];
@@ -139,6 +140,8 @@ router.post('/', async (req, res) => {
   const description = text(req.body.description);
 
   if (!name) return res.status(400).json({ error: 'Nom requis' });
+  const trop = tropLong({ Nom: [name, LIMITS.nom], Description: [description, LIMITS.description] });
+  if (trop) return res.status(400).json({ error: trop });
   const category = await prisma.category.findUnique({ where: { id: Number(categoryId) } });
   if (!category) return res.status(400).json({ error: 'Catégorie inconnue' });
   if (priority && !['low', 'medium', 'high'].includes(priority)) {

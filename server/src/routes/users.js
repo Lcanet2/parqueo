@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
-import { text } from '../lib/input.js';
+import { text, tropLong, LIMITS } from '../lib/input.js';
 
 const router = Router();
 
@@ -48,6 +48,8 @@ router.post('/', async (req, res) => {
   if (!email || typeof password !== 'string' || !name) {
     return res.status(400).json({ error: 'Email, mot de passe et nom requis' });
   }
+  const trop = tropLong({ Nom: [name, LIMITS.nom], Email: [email, LIMITS.libelle] });
+  if (trop) return res.status(400).json({ error: trop });
   if (password.length < 8) {
     return res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' });
   }
@@ -174,13 +176,35 @@ router.delete('/:id', async (req, res) => {
   }
   const existing = await prisma.user.findUnique({
     where: { id },
-    include: { _count: { select: { authoredTickets: true, ticketComments: true } } },
+    include: {
+      _count: {
+        select: {
+          authoredTickets: true,
+          // assignedTickets manquait : un technicien qui n'avait jamais ouvert
+          // de ticket se supprimait sans un mot, et tous ceux qu'il traitait
+          // passaient à « non assigné » — la trace de son travail disparaissait.
+          assignedTickets: true,
+          ticketComments: true,
+          kbArticles: true,
+          attachments: true,
+        },
+      },
+    },
   });
   if (!existing) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
-  if (existing._count.authoredTickets > 0 || existing._count.ticketComments > 0) {
+  const c = existing._count;
+  const usages = [
+    c.authoredTickets && `${c.authoredTickets} ticket${c.authoredTickets > 1 ? 's' : ''} créé${c.authoredTickets > 1 ? 's' : ''}`,
+    c.assignedTickets && `${c.assignedTickets} ticket${c.assignedTickets > 1 ? 's' : ''} assigné${c.assignedTickets > 1 ? 's' : ''}`,
+    c.ticketComments && `${c.ticketComments} commentaire${c.ticketComments > 1 ? 's' : ''}`,
+    c.kbArticles && `${c.kbArticles} article${c.kbArticles > 1 ? 's' : ''}`,
+    c.attachments && `${c.attachments} pièce${c.attachments > 1 ? 's' : ''} jointe${c.attachments > 1 ? 's' : ''}`,
+  ].filter(Boolean);
+
+  if (usages.length) {
     return res.status(409).json({
-      error: 'Cet utilisateur a des tickets ou commentaires. Suppression impossible.',
+      error: `Cet utilisateur a ${usages.join(', ')}. Changez son rôle ou son mot de passe plutôt que de le supprimer.`,
     });
   }
 

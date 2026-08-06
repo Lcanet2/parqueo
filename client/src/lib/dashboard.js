@@ -3,67 +3,66 @@
 // (API /settings/dashboard) et s'appliquent à tous les comptes du rôle.
 
 const OPEN = ['new', 'in_progress', 'waiting'];
-const DAY = 24 * 60 * 60 * 1000;
 
 export const isOpen = (t) => OPEN.includes(t.status);
 
 // --- Métriques disponibles pour les tuiles de stat ---
 // calc reçoit { tickets, assets, user } (données déjà filtrées par rôle côté API).
+// calc reçoit { stats, assets, user } — les compteurs viennent de
+// GET /api/tickets/stats, agrégés en SQL. Auparavant chaque métrique
+// parcourait l'intégralité des tickets téléchargés dans le navigateur.
 export const METRICS = {
   open_total: {
     label: 'Tickets ouverts',
-    calc: ({ tickets }) => tickets.filter(isOpen).length,
+    calc: ({ stats }) => stats.compteurs.ouverts,
     to: '/tickets',
   },
   new_total: {
     label: 'Nouveaux tickets',
-    calc: ({ tickets }) => tickets.filter((t) => t.status === 'new').length,
+    calc: ({ stats }) => stats.parStatut.new,
     to: '/tickets?status=new',
   },
   unassigned: {
     label: 'À traiter (non assignés)',
     staffOnly: true,
-    calc: ({ tickets }) => tickets.filter((t) => !t.assigneeId && isOpen(t)).length,
+    calc: ({ stats }) => stats.compteurs.nonAssignesOuverts,
     to: '/tickets?status=new',
   },
   mine_assigned: {
     label: 'Mes tickets en cours',
     staffOnly: true,
-    calc: ({ tickets, user }) => tickets.filter((t) => t.assigneeId === user.id && isOpen(t)).length,
+    calc: ({ stats }) => stats.compteurs.mesAssignesOuverts,
     to: '/tickets?assignee=me',
   },
   high_open: {
     label: 'Priorité haute ouverte',
     accent: true,
-    calc: ({ tickets }) => tickets.filter((t) => t.priority === 'high' && isOpen(t)).length,
+    calc: ({ stats }) => stats.compteurs.hautesOuvertes,
     to: '/tickets?priority=high',
   },
   waiting: {
     label: 'En attente',
-    calc: ({ tickets }) => tickets.filter((t) => t.status === 'waiting').length,
+    calc: ({ stats }) => stats.parStatut.waiting,
     to: '/tickets?status=waiting',
   },
   resolved: {
     label: 'Résolus',
-    calc: ({ tickets }) => tickets.filter((t) => t.status === 'resolved').length,
+    calc: ({ stats }) => stats.parStatut.resolved,
     to: '/tickets?status=resolved',
   },
   created_7d: {
     label: 'Créés sur 7 jours',
-    calc: ({ tickets }) => tickets.filter((t) => Date.now() - new Date(t.createdAt) < 7 * DAY).length,
+    calc: ({ stats }) => stats.compteurs.crees7j,
     to: '/tickets',
   },
   resolved_7d: {
     label: 'Clôturés sur 7 jours',
-    calc: ({ tickets }) =>
-      tickets.filter(
-        (t) => ['resolved', 'closed'].includes(t.status) && Date.now() - new Date(t.updatedAt) < 7 * DAY
-      ).length,
+    calc: ({ stats }) => stats.compteurs.clotures7j,
     to: '/tickets?status=resolved',
   },
   my_open: {
     label: 'Mes tickets ouverts',
-    calc: ({ tickets, user }) => tickets.filter((t) => t.authorId === user.id && isOpen(t)).length,
+    calc: ({ stats }) => stats.compteurs.mesOuverts,
     to: '/tickets',
   },
   assets_total: {

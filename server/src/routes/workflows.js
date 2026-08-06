@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { WORKFLOW_TRIGGERS, STEP_TYPES } from '../services/workflowEngine.js';
-import { text } from '../lib/input.js';
+import { text, tropLong, LIMITS } from '../lib/input.js';
 
 const router = Router();
 
@@ -70,6 +70,8 @@ router.post('/', async (req, res) => {
   const { trigger } = req.body;
   const name = text(req.body.name);
   if (!name) return res.status(400).json({ error: 'Nom requis' });
+  const trop = tropLong({ Nom: [name, LIMITS.nom] });
+  if (trop) return res.status(400).json({ error: trop });
   if (!WORKFLOW_TRIGGERS.includes(trigger)) return res.status(400).json({ error: 'Déclencheur invalide' });
 
   const last = await prisma.workflow.findFirst({ orderBy: { position: 'desc' } });
@@ -89,6 +91,8 @@ router.put('/:id', async (req, res) => {
   const { active, trigger, conditions, steps, layout } = req.body;
   const name = text(req.body.name);
   if (!name) return res.status(400).json({ error: 'Nom requis' });
+  const tropNom = tropLong({ Nom: [name, LIMITS.nom] });
+  if (tropNom) return res.status(400).json({ error: tropNom });
   if (!WORKFLOW_TRIGGERS.includes(trigger)) return res.status(400).json({ error: 'Déclencheur invalide' });
   const stepError = validateSteps(steps ?? []);
   if (stepError) return res.status(400).json({ error: stepError });

@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { getAppSettings } from '../lib/appSettings.js';
-import { text } from '../lib/input.js';
+import { text, tropLong, LIMITS } from '../lib/input.js';
 
 const router = Router();
 
@@ -95,6 +95,9 @@ function parseAssetBody(body, { partial = false } = {}) {
   if (assignedUserId !== undefined) {
     data.assignedUserId = assignedUserId === null ? null : Number(assignedUserId);
   }
+
+  const trop = tropLong({ Nom: [data.name, LIMITS.nom], Emplacement: [data.location, LIMITS.libelle] });
+  if (trop) errors.push(trop);
 
   return { data, errors };
 }

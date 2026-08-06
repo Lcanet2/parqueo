@@ -18,12 +18,42 @@ const layoutKey = (role) => `dashboard.layout.${role}`;
 // pour être conservé et synchronisé entre navigateurs/appareils.
 const personalKey = (userId) => `dashboard.layout.user.${userId}`;
 
+// Types de widgets et tailles reconnus — pendant serveur du catalogue client
+// (client/src/lib/dashboard.js). À garder synchronisés si le catalogue évolue.
+const WIDGET_TYPES = new Set([
+  'stat',
+  'donut',
+  'status-bar',
+  'weekly-flow',
+  'category-bars',
+  'priority-bars',
+  'tech-load',
+  'team-load',
+  'age-bars',
+  'asset-type-bars',
+  'asset-status-bar',
+  'ticket-list',
+  'asset-list',
+]);
+const WIDGET_SIZES = new Set([1, 2, 4]);
+
+// Un layout invalide s'applique à tous les comptes d'un rôle : la validation
+// est stricte. `typeof null === 'object'` en JavaScript — d'où le contrôle
+// explicite, sans lequel un `config: null` faisait planter le tableau de bord
+// de tout le monde.
 function isValidLayout(layout) {
   return (
     Array.isArray(layout) &&
     layout.length <= 40 &&
     layout.every(
-      (i) => i && typeof i.type === 'string' && typeof i.size === 'number' && typeof i.config === 'object'
+      (i) =>
+        i &&
+        typeof i === 'object' &&
+        WIDGET_TYPES.has(i.type) &&
+        WIDGET_SIZES.has(i.size) &&
+        i.config !== null &&
+        typeof i.config === 'object' &&
+        !Array.isArray(i.config)
     )
   );
 }

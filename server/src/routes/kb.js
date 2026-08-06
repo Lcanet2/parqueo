@@ -2,7 +2,7 @@ import { Router } from '../lib/router.js';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { getAppSettings } from '../lib/appSettings.js';
-import { text } from '../lib/input.js';
+import { text, tropLong, LIMITS } from '../lib/input.js';
 
 const router = Router();
 
@@ -67,6 +67,8 @@ router.post('/', canWriteKb, async (req, res) => {
   if (!title || !body) {
     return res.status(400).json({ error: 'Titre et contenu requis' });
   }
+  const trop = tropLong({ Titre: [title, LIMITS.articleTitre], Contenu: [body, LIMITS.articleCorps] });
+  if (trop) return res.status(400).json({ error: trop });
   const article = await prisma.kbArticle.create({
     data: {
       title,
@@ -89,6 +91,8 @@ router.patch('/:id', canWriteKb, async (req, res) => {
   const data = {};
   if (title !== undefined && text(title)) data.title = text(title);
   if (body !== undefined && text(body)) data.body = text(body);
+  const trop = tropLong({ Titre: [data.title, LIMITS.articleTitre], Contenu: [data.body, LIMITS.articleCorps] });
+  if (trop) return res.status(400).json({ error: trop });
   if (categoryId !== undefined) data.categoryId = categoryId === null ? null : Number(categoryId);
   if (published !== undefined) data.published = Boolean(published);
 

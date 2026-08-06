@@ -124,7 +124,8 @@ describe('contraintes de base de données', () => {
       body: { title: 'Test', description: 'x', categoryId: ctx.category.id, assetId: 999999 },
     });
     assert.equal(res.status, 400);
-    assert.equal(res.data.error, 'Référence inconnue');
+    // Contrôlé en amont désormais : l'actif est vérifié avant l'insertion.
+    assert.equal(res.data.error, 'Actif inconnu');
     assert.ok(await vivant());
   });
 

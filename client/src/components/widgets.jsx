@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Badge, Card, EmptyState } from './ui.jsx';
 import TicketTable from './TicketTable.jsx';
-import { METRICS, isOpen } from '../lib/dashboard.js';
+import { METRICS } from '../lib/dashboard.js';
 import { TICKET_STATUS, TICKET_PRIORITY, ASSET_TYPE, ASSET_STATUS, formatDate } from '../lib/labels.js';
 
 // Tokens (thème clair/sombre) plutôt que hex figés — cohérent avec le reste des
 // graphiques : « créés » en bleu (statut nouveau), « clôturés » en vert (résolu).
 const SERIES = { created: 'var(--color-status-new)', closed: 'var(--color-status-resolved)' };
-const DAY = 24 * 60 * 60 * 1000;
 
 // ---------- Briques graphiques partagées ----------
 
@@ -76,23 +75,14 @@ function SegmentedBar({ items, total, linkFor }) {
 }
 
 // Colonnes hebdomadaires, 1 ou 2 séries, légende obligatoire si 2 séries.
-function WeeklyColumns({ series, weeks }) {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  // Lundi de la semaine courante
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-
-  const buckets = [];
-  for (let w = weeks - 1; w >= 0; w--) {
-    const from = new Date(start.getTime() - w * 7 * DAY);
-    const to = new Date(from.getTime() + 7 * DAY);
-    buckets.push({
-      label: from.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-      values: series.map((s) => s.dates.filter((d) => d >= from && d < to).length),
-      from,
-    });
-  }
+// `semaines` vient déjà agrégé du serveur : [{ debut, crees, clotures }].
+function WeeklyColumns({ series, semaines }) {
+  const buckets = semaines.map((sem) => ({
+    label: new Date(sem.debut).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+    values: series.map((s) => sem[s.cle] ?? 0),
+  }));
   const max = Math.max(1, ...buckets.flatMap((b) => b.values));
+  const weeks = buckets.length;
 
   return (
     <div className="px-4 py-3">
@@ -227,25 +217,26 @@ function StatusBarWidget({ data }) {
     key,
     label: s.label,
     fg: s.fg,
-    count: data.tickets.filter((t) => t.status === key).length,
+    count: data.stats.parStatut[key] ?? 0,
   }));
   return (
-    <Card title="Répartition par statut" action={<span className="text-xs tabular-nums text-ink-faint">{data.tickets.length} tickets</span>}>
-      <SegmentedBar items={items} total={data.tickets.length} linkFor={(k) => `/tickets?status=${k}`} />
+    <Card title="Répartition par statut" action={<span className="text-xs tabular-nums text-ink-faint">{data.stats.total} tickets</span>}>
+      <SegmentedBar items={items} total={data.stats.total} linkFor={(k) => `/tickets?status=${k}`} />
     </Card>
   );
 }
 
 function WeeklyFlowWidget({ data, config }) {
   const weeks = Number(config.weeks) || 8;
-  const closed = data.tickets.filter((t) => ['resolved', 'closed'].includes(t.status));
+  // Le serveur en renvoie douze : on garde les dernières demandées.
+  const semaines = data.stats.hebdo.slice(-weeks);
   return (
     <Card title="Flux hebdomadaire" action={<span className="text-xs text-ink-faint">clôture ≈ dernière activité</span>}>
       <WeeklyColumns
-        weeks={weeks}
+        semaines={semaines}
         series={[
-          { label: 'Créés', color: SERIES.created, dates: data.tickets.map((t) => new Date(t.createdAt)) },
-          { label: 'Clôturés', color: SERIES.closed, dates: closed.map((t) => new Date(t.updatedAt)) },
+          { label: 'Créés', color: SERIES.created, cle: 'crees' },
+          { label: 'Clôturés', color: SERIES.closed, cle: 'clotures' },
         ]}
       />
     </Card>
@@ -253,14 +244,10 @@ function WeeklyFlowWidget({ data, config }) {
 }
 
 function CategoryBarsWidget({ data, config }) {
-  const pool = config.scope === 'all' ? data.tickets : data.tickets.filter(isOpen);
-  const byCat = {};
-  for (const t of pool) {
-    const name = t.category?.name ?? 'Sans catégorie';
-    byCat[name] = (byCat[name] ?? 0) + 1;
-  }
-  const rows = Object.entries(byCat)
-    .map(([label, count]) => ({ label, count }))
+  const tous = config.scope === 'all';
+  const rows = data.stats.parCategorie
+    .map((c) => ({ label: c.nom, count: tous ? c.total : c.ouverts }))
+    .filter((r) => r.count > 0)
     .sort((a, b) => b.count - a.count);
   return (
     <Card title="Tickets par catégorie" action={<span className="text-xs text-ink-faint">{config.scope === 'all' ? 'tous' : 'ouverts'}</span>}>
@@ -273,7 +260,7 @@ function PriorityBarsWidget({ data }) {
   const rows = Object.entries(TICKET_PRIORITY).map(([key, p]) => ({
     label: p.label,
     color: p.fg,
-    count: data.tickets.filter((t) => t.priority === key && isOpen(t)).length,
+    count: data.stats.ouvertsParPriorite[key] ?? 0,
   }));
   return (
     <Card title="Tickets ouverts par priorité">
@@ -283,14 +270,8 @@ function PriorityBarsWidget({ data }) {
 }
 
 function TechLoadWidget({ data }) {
-  const byTech = {};
-  for (const t of data.tickets.filter(isOpen)) {
-    const name = t.assignee?.name ?? 'Non assigné';
-    byTech[name] = (byTech[name] ?? 0) + 1;
-  }
-  const rows = Object.entries(byTech)
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count)
+  const rows = data.stats.ouvertsParAssigne
+    .map((a) => ({ label: a.nom, count: a.count }))
     .slice(0, 8);
   return (
     <Card title="Charge par technicien">
@@ -300,14 +281,7 @@ function TechLoadWidget({ data }) {
 }
 
 function TeamLoadWidget({ data }) {
-  const byTeam = {};
-  for (const t of data.tickets.filter(isOpen)) {
-    const name = t.team?.name ?? 'Sans équipe';
-    byTeam[name] = (byTeam[name] ?? 0) + 1;
-  }
-  const rows = Object.entries(byTeam)
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count);
+  const rows = data.stats.ouvertsParEquipe.map((e) => ({ label: e.nom, count: e.count }));
   return (
     <Card title="Charge par équipe">
       <BarList rows={rows} emptyText="Aucun ticket ouvert" />
@@ -316,19 +290,7 @@ function TeamLoadWidget({ data }) {
 }
 
 function AgeBarsWidget({ data }) {
-  const buckets = [
-    { label: '< 24 h', max: DAY },
-    { label: '1 à 3 jours', max: 3 * DAY },
-    { label: '3 à 7 jours', max: 7 * DAY },
-    { label: '1 à 4 semaines', max: 28 * DAY },
-    { label: '> 1 mois', max: Infinity },
-  ];
-  const rows = buckets.map((b) => ({ label: b.label, count: 0 }));
-  for (const t of data.tickets.filter(isOpen)) {
-    const age = Date.now() - new Date(t.createdAt);
-    const idx = buckets.findIndex((b) => age < b.max);
-    rows[idx === -1 ? rows.length - 1 : idx].count++;
-  }
+  const rows = data.stats.ageOuverts;
   return (
     <Card title="Âge des tickets ouverts">
       <BarList rows={rows} color="var(--color-status-progress)" emptyText="Aucun ticket ouvert" />
@@ -376,34 +338,28 @@ function DonutWidget({ data, config }) {
       key,
       label: s.label,
       fg: s.fg,
-      count: data.tickets.filter((t) => t.status === key).length,
+      count: data.stats.parStatut[key] ?? 0,
     }));
-    total = data.tickets.length;
+    total = data.stats.total;
   } else if (source === 'priority') {
     title = 'Priorités (donut)';
-    const open = data.tickets.filter(isOpen);
     items = Object.entries(TICKET_PRIORITY).map(([key, p]) => ({
       key,
       label: p.label,
       fg: p.fg,
-      count: open.filter((t) => t.priority === key).length,
+      count: data.stats.ouvertsParPriorite[key] ?? 0,
     }));
-    total = open.length;
+    total = data.stats.compteurs.ouverts;
     centerLabel = 'ouverts';
   } else if (source === 'category') {
     title = 'Catégories (donut)';
-    const byCat = {};
-    for (const t of data.tickets) {
-      const name = t.category?.name ?? 'Sans catégorie';
-      byCat[name] = (byCat[name] ?? 0) + 1;
-    }
-    const sorted = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+    const triees = data.stats.parCategorie.filter((c) => c.total > 0);
     // Au-delà de 5 catégories, on replie le reste dans « Autres ».
-    const top = sorted.slice(0, 5);
-    const rest = sorted.slice(5).reduce((sum, [, c]) => sum + c, 0);
-    items = top.map(([label, count], i) => ({ key: label, label, fg: CATEGORICAL[i], count }));
+    const top = triees.slice(0, 5);
+    const rest = triees.slice(5).reduce((sum, c) => sum + c.total, 0);
+    items = top.map((c, i) => ({ key: c.nom, label: c.nom, fg: CATEGORICAL[i], count: c.total }));
     if (rest > 0) items.push({ key: '__autres', label: 'Autres', fg: CATEGORICAL[5], count: rest });
-    total = data.tickets.length;
+    total = data.stats.total;
   } else {
     title = 'État du parc (donut)';
     items = Object.entries(ASSET_STATUS).map(([key, s]) => ({
@@ -423,24 +379,23 @@ function DonutWidget({ data, config }) {
   );
 }
 
+// Les listes sont préparées par le serveur (quelques lignes chacune), plus
+// filtrées depuis l'intégralité des tickets côté navigateur.
 const TICKET_SCOPES = {
-  todo: {
-    title: 'À traiter',
-    filter: (t, user) => isOpen(t) && (!t.assigneeId || t.assigneeId === user.id),
-  },
-  mine_assigned: { title: 'Assignés à moi', filter: (t, user) => t.assigneeId === user.id && isOpen(t) },
-  mine_authored: { title: 'Mes demandes', filter: (t, user) => t.authorId === user.id },
-  high: { title: 'Priorité haute ouverte', filter: (t) => t.priority === 'high' && isOpen(t) },
-  recent: { title: 'Activité récente', filter: () => true },
+  todo: 'À traiter',
+  mine_assigned: 'Assignés à moi',
+  mine_authored: 'Mes demandes',
+  high: 'Priorité haute ouverte',
+  recent: 'Activité récente',
 };
 
 function TicketListWidget({ data, config }) {
-  const scope = TICKET_SCOPES[config.scope] ?? TICKET_SCOPES.recent;
+  const cle = TICKET_SCOPES[config.scope] ? config.scope : 'recent';
   const limit = Number(config.limit) || 5;
-  const tickets = data.tickets.filter((t) => scope.filter(t, data.user)).slice(0, limit);
+  const tickets = (data.stats.listes[cle] ?? []).slice(0, limit);
   return (
     <Card
-      title={scope.title}
+      title={TICKET_SCOPES[cle]}
       action={
         <Link to="/tickets" className="text-xs text-ink-soft hover:text-accent">
           Tout voir
