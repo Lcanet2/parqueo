@@ -10,6 +10,7 @@ import { requireRole } from '../middleware/roles.js';
 import { visibilityWhere } from '../lib/visibility.js';
 import { getAppSettings } from '../lib/appSettings.js';
 import { text, tropLong, LIMITS, entierBorne } from '../lib/input.js';
+import { statutApresAssignation } from '../lib/statut.js';
 import { ticketStats, ticketListes } from '../lib/stats.js';
 import { onTicketCreated, onTicketUpdated } from '../services/workflowEngine.js';
 import { describeGate } from '../lib/workflowUtils.js';
@@ -350,6 +351,16 @@ router.patch('/:id', requireRole('admin', 'technician'), async (req, res) => {
     }
     data.assigneeId = newAssigneeId;
   }
+  // Prise en charge : un ticket « Nouveau » qui reçoit un assigné passe « En
+  // cours ». Un statut demandé explicitement dans la même requête l'emporte.
+  if (data.status === undefined) {
+    const auto = statutApresAssignation(existing.status, data.assigneeId);
+    if (auto) {
+      data.status = auto;
+      events.push(`Statut changé : ${existing.status} → ${auto} (prise en charge)`);
+    }
+  }
+
   if (categoryId !== undefined) data.categoryId = Number(categoryId);
   if (teamId !== undefined) data.teamId = teamId === null ? null : Number(teamId);
   if (assetId !== undefined) data.assetId = assetId === null ? null : Number(assetId);

@@ -7,6 +7,7 @@ import {
   evaluateCondition,
 } from '../lib/workflowUtils.js';
 import { sendMail } from './mailer.js';
+import { statutApresAssignation } from '../lib/statut.js';
 
 // Moteur de workflows : parcours de graphe à états. Un ticket qui correspond à
 // un workflow « ticket créé » entre au bloc du déclencheur et suit les fils
@@ -177,7 +178,14 @@ async function applyAction(step, ticket, wf) {
     case 'assign_user': {
       const user = await prisma.user.findUnique({ where: { id: Number(cfg.userId) || 0 } });
       if (!user || user.role === 'user' || ticket.assigneeId === user.id) return ticket;
-      return updateWithEvent(ticket, { assigneeId: user.id }, `Assigné à ${user.name} (${label})`);
+      // Même invariant que l'assignation manuelle : un ticket assigné n'est
+      // plus « Nouveau ». Sinon le statut dépendrait de qui a assigné.
+      const auto = statutApresAssignation(ticket.status, user.id);
+      return updateWithEvent(
+        ticket,
+        { assigneeId: user.id, ...(auto ? { status: auto } : {}) },
+        `Assigné à ${user.name} (${label})`
+      );
     }
     case 'set_priority': {
       if (!PRIORITIES.includes(cfg.priority) || ticket.priority === cfg.priority) return ticket;

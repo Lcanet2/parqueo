@@ -273,3 +273,99 @@ describe('formulaires du catalogue', () => {
     assert.equal(manquant.status, 400);
   });
 });
+
+describe('prise en charge automatique (comportement GLPI)', () => {
+  test('assigner un ticket « Nouveau » le passe « En cours », avec trace', async () => {
+    const { data } = await creerTicket(t.user, { title: 'À prendre en charge' });
+    assert.equal(data.status, 'new');
+
+    const res = await api.patch(`/api/tickets/${data.id}`, {
+      token: t.admin,
+      body: { assigneeId: ctx.tech.id },
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.status, 'in_progress', 'le ticket doit passer En cours');
+    assert.equal(res.data.assignee.id, ctx.tech.id);
+
+    const journal = (await api.get(`/api/tickets/${data.id}`, { token: t.admin })).data.comments;
+    const corps = journal.map((c) => c.body);
+    assert.ok(corps.some((b) => b.includes('Assigné à')), 'assignation tracée');
+    assert.ok(
+      corps.some((b) => b.includes('new → in_progress') && b.includes('prise en charge')),
+      'le changement automatique doit être tracé et expliqué'
+    );
+  });
+
+  test('un statut demandé explicitement l’emporte', async () => {
+    const { data } = await creerTicket(t.user);
+    const res = await api.patch(`/api/tickets/${data.id}`, {
+      token: t.admin,
+      body: { assigneeId: ctx.tech.id, status: 'waiting' },
+    });
+    assert.equal(res.data.status, 'waiting');
+  });
+
+  test('assigner un ticket résolu ne le rouvre pas', async () => {
+    const { data } = await creerTicket(t.user);
+    await api.patch(`/api/tickets/${data.id}`, { token: t.admin, body: { status: 'resolved' } });
+    const res = await api.patch(`/api/tickets/${data.id}`, {
+      token: t.admin,
+      body: { assigneeId: ctx.tech.id },
+    });
+    assert.equal(res.data.status, 'resolved');
+  });
+
+  test('retirer l’assignation laisse le statut inchangé', async () => {
+    const { data } = await creerTicket(t.user);
+    await api.patch(`/api/tickets/${data.id}`, { token: t.admin, body: { assigneeId: ctx.tech.id } });
+    const res = await api.patch(`/api/tickets/${data.id}`, { token: t.admin, body: { assigneeId: null } });
+    assert.equal(res.data.status, 'in_progress');
+    assert.equal(res.data.assigneeId, null);
+  });
+
+  test('un workflow qui assigne applique la même règle', async () => {
+    await prisma.workflowRun.deleteMany();
+    await prisma.workflowStep.deleteMany();
+    await prisma.workflow.deleteMany();
+    const wf = await prisma.workflow.create({
+      data: {
+        name: 'Attribution directe',
+        trigger: 'ticket_created',
+        edges: { trigger: 'a' },
+        steps: { create: [{ key: 'a', type: 'assign_user', config: { userId: ctx.tech.id }, position: 0 }] },
+      },
+    });
+
+    const { data } = await creerTicket(t.user, { title: 'Assigné par workflow' });
+    assert.equal(data.assigneeId, ctx.tech.id);
+    assert.equal(data.status, 'in_progress', 'le statut ne doit pas dépendre de qui assigne');
+
+    await prisma.workflow.delete({ where: { id: wf.id } });
+  });
+
+  test('la transition déclenche les workflows « statut changé »', async () => {
+    await prisma.workflowRun.deleteMany();
+    await prisma.workflowStep.deleteMany();
+    await prisma.workflow.deleteMany();
+    const wf = await prisma.workflow.create({
+      data: {
+        name: 'Accusé de prise en charge',
+        trigger: 'status_changed',
+        conditions: { toStatus: 'in_progress' },
+        edges: { trigger: 'n' },
+        steps: { create: [{ key: 'n', type: 'add_note', config: { body: 'Pris en charge' }, position: 0 }] },
+      },
+    });
+
+    const { data } = await creerTicket(t.user);
+    await api.patch(`/api/tickets/${data.id}`, { token: t.admin, body: { assigneeId: ctx.tech.id } });
+
+    const journal = (await api.get(`/api/tickets/${data.id}`, { token: t.admin })).data.comments;
+    assert.ok(
+      journal.some((c) => c.body === 'Pris en charge'),
+      'un workflow sur « En cours » doit s’exécuter, comme pour un changement manuel'
+    );
+
+    await prisma.workflow.delete({ where: { id: wf.id } });
+  });
+});
