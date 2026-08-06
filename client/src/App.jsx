@@ -16,7 +16,9 @@ import Assets from './pages/Assets.jsx';
 import AssetDetail from './pages/AssetDetail.jsx';
 import Software from './pages/Software.jsx';
 import Admin from './pages/Admin.jsx';
+import Account from './pages/Account.jsx';
 import { Spinner } from './components/ui.jsx';
+import GlobalErrors from './components/GlobalErrors.jsx';
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -43,6 +45,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <GlobalErrors />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
@@ -60,6 +63,7 @@ export default function App() {
             <Route path="/tickets/nouveau/libre" element={<TicketNew />} />
             <Route path="/demandes/:id" element={<FormFill />} />
             <Route path="/tickets/:id" element={<TicketDetail />} />
+            <Route path="/compte" element={<Account />} />
             <Route path="/aide" element={<Kb />} />
             <Route path="/aide/nouveau" element={<KbArticle />} />
             <Route path="/aide/:id" element={<KbArticle />} />

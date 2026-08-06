@@ -70,11 +70,17 @@ export default function Layout() {
         {nav}
         <div className="border-t border-line pt-3">
           <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
-            <Avatar name={user.name} id={user.id} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{user.name}</div>
-              <div className="text-xs text-ink-faint">{ROLE[user.role]}</div>
-            </div>
+            <Link
+              to="/compte"
+              title="Mon compte"
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md transition-colors hover:text-accent"
+            >
+              <Avatar name={user.name} id={user.id} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{user.name}</span>
+                <span className="block text-xs text-ink-faint">{ROLE[user.role]}</span>
+              </span>
+            </Link>
             <button
               onClick={onLogout}
               title="Se déconnecter"
@@ -93,9 +99,14 @@ export default function Layout() {
           <Link to="/" className="text-[15px]">
             <Brand />
           </Link>
-          <button onClick={onLogout} className="text-sm text-ink-soft">
-            Déconnexion
-          </button>
+          <div className="flex items-center gap-3">
+            <Link to="/compte" className="text-sm text-ink-soft">
+              Mon compte
+            </Link>
+            <button onClick={onLogout} className="text-sm text-ink-soft">
+              Déconnexion
+            </button>
+          </div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-2 pb-2">
           {links.map((l) => (
