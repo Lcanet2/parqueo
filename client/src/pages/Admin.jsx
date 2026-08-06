@@ -32,7 +32,11 @@ export default function Admin() {
   const [tab, setTab] = useState('users');
 
   return (
-    <div className="mx-auto max-w-page space-y-4">
+    // Le canevas de workflow est une surface de travail : chaque pixel de
+    // largeur sert à poser des blocs, contrairement à un tableau qui, au-delà
+    // d'une certaine largeur, ne fait qu'écarter ses colonnes. Il prend donc
+    // tout le <main>, sans plafond.
+    <div className={`mx-auto space-y-4 ${tab === 'workflows' ? 'max-w-none' : 'max-w-page'}`}>
       <h1 className="text-lg font-semibold tracking-tight">Administration</h1>
 
       <div className="flex gap-1 border-b border-line">
