@@ -15,7 +15,7 @@ function BarList({ rows, color = 'var(--color-status-new)', emptyText = 'Aucune 
   const max = Math.max(...rows.map((r) => r.count), 0);
   if (max === 0) return <EmptyState>{emptyText}</EmptyState>;
   return (
-    <ul className="space-y-2 px-4 py-3">
+    <ul className="flex h-full flex-col justify-around gap-2 px-4 py-3">
       {rows.map((r) => (
         <li key={r.label} className="flex items-center gap-3" title={`${r.label} : ${r.count}`}>
           <span className="w-28 shrink-0 truncate text-xs text-ink-soft">{r.label}</span>
@@ -36,8 +36,8 @@ function BarList({ rows, color = 'var(--color-status-new)', emptyText = 'Aucune 
 function SegmentedBar({ items, total, linkFor }) {
   if (total === 0) return <EmptyState>Aucune donnée</EmptyState>;
   return (
-    <div className="px-4 py-3">
-      <div className="flex h-3 gap-0.5 overflow-hidden rounded">
+    <div className="flex h-full flex-col justify-between px-4 py-3">
+      <div className="flex h-3 max-h-10 min-h-3 flex-1 gap-0.5 overflow-hidden rounded">
         {items
           .filter((i) => i.count > 0)
           .map((i) => (
@@ -49,7 +49,7 @@ function SegmentedBar({ items, total, linkFor }) {
             />
           ))}
       </div>
-      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+      <div className="mt-2.5 flex shrink-0 flex-wrap gap-x-4 gap-y-1">
         {items.map((i) => {
           const inner = (
             <>
@@ -85,8 +85,8 @@ function WeeklyColumns({ series, semaines }) {
   const weeks = buckets.length;
 
   return (
-    <div className="px-4 py-3">
-      <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
+    <div className="flex h-full flex-col px-4 py-3">
+      <div className="mb-2 flex shrink-0 flex-wrap gap-x-4 gap-y-1">
         {series.map((s) => (
           <span key={s.label} className="flex items-center gap-1.5 text-xs text-ink-soft">
             <span className="h-2 w-2 rounded-[2px]" style={{ background: s.color }} />
@@ -94,7 +94,7 @@ function WeeklyColumns({ series, semaines }) {
           </span>
         ))}
       </div>
-      <div className="flex h-28 items-end gap-1 border-b border-line pb-px">
+      <div className="flex min-h-28 flex-1 items-end gap-1 border-b border-line pb-px">
         {buckets.map((b) => (
           <div
             key={b.label}
@@ -133,7 +133,7 @@ function DonutChart({ items, total, centerLabel }) {
   let offset = 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4">
+    <div className="flex h-full flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4">
       <svg width="120" height="120" viewBox="0 0 120 120" className="shrink-0 -rotate-90">
         {visible.map((i) => {
           const len = Math.max((i.count / total) * C - gap, 1);
