@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  serveur:
+    name: API
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: parqueo
+          POSTGRES_PASSWORD: parqueo
+          POSTGRES_DB: parqueo_test
+        ports:
+          - 5432:5432
+        # Les étapes suivantes doivent attendre une base réellement prête.
+        options: >-
+          --health-cmd "pg_isready -U parqueo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://parqueo:parqueo@localhost:5432/parqueo_test?schema=public
+      JWT_SECRET: secret-de-ci
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      # Sans --omit=dev : la CLI Prisma qui applique les migrations est une
+      # dépendance de développement.
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - name: Migrations sur la base de test
+        run: npx prisma migrate deploy
+
+      - name: Tests unitaires (logique pure, sans base)
+        run: npm test
+
+      - name: Tests d'API (bout en bout)
+        run: npm run test:api
+
+  client:
+    name: Client
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    name: Images Docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Vérifie que la stack d'évaluation reste constructible et démarrable.
+      - name: Valider docker-compose.yml
+        run: docker compose config --quiet
+        env:
+          JWT_SECRET: secret-de-ci
+          POSTGRES_PASSWORD: parqueo
+
+      - name: Construire les images
+        run: docker compose build
+        env:
+          JWT_SECRET: secret-de-ci
+          POSTGRES_PASSWORD: parqueo
+
+      - name: Démarrer la stack et attendre l'API
+        env:
+          JWT_SECRET: secret-de-ci
+          POSTGRES_PASSWORD: parqueo
+        run: |
+          docker compose up -d
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/health > /dev/null; then
+              echo "API prête"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "L'API n'a pas répondu à temps"
+          docker compose logs
+          exit 1
+
+      - name: Vérifier que le client est servi sur la même origine
+        run: |
+          curl -fsS http://localhost:8080/ | grep -q 'id="root"'
+          curl -fsS http://localhost:8080/api/health | grep -q '"ok":true'
+
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose logs
+
+      - name: Arrêt
+        if: always()
+        run: docker compose down -v

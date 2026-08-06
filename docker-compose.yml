@@ -1,0 +1,86 @@
+# Stack Parqueo prête à essayer : PostgreSQL, l'API, et nginx qui sert le client
+# et proxifie /api. Configuration dans .env (voir .env.docker.example).
+#
+#   cp .env.docker.example .env
+#   printf 'JWT_SECRET=%s\n' "$(openssl rand -base64 48)" >> .env
+#   docker compose up -d
+#
+# Pour une mise en production réelle (TLS, sauvegardes, supervision), voir
+# docs/installation.md.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-parqueo}
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?manquant — copiez .env.docker.example vers .env}'
+      POSTGRES_DB: ${POSTGRES_DB:-parqueo}
+    volumes:
+      - parqueo-db:/var/lib/postgresql/data
+    healthcheck:
+      # L'API attend une base réellement prête, pas seulement un conteneur démarré.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-parqueo} -d ${POSTGRES_DB:-parqueo}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-parqueo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-parqueo}?schema=public'
+      # Aucune valeur par défaut : un secret partagé publiquement laisserait
+      # n'importe qui forger un jeton d'administrateur.
+      JWT_SECRET: '${JWT_SECRET:?manquant — générez-en un, voir .env.docker.example}'
+      PORT: '4000'
+      # Front et API partagent l'origine du conteneur web : CORS sans objet.
+      CLIENT_ORIGIN: '${PUBLIC_URL:-http://localhost:8080}'
+      APP_URL: '${PUBLIC_URL:-http://localhost:8080}'
+      SEED_ON_START: '${SEED_ON_START:-true}'
+      # Options — décommentez dans .env, voir server/.env.example et
+      # docs/installation.md §3 pour la référence complète.
+      SMTP_HOST: '${SMTP_HOST:-}'
+      SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_USER: '${SMTP_USER:-}'
+      SMTP_PASS: '${SMTP_PASS:-}'
+      SMTP_FROM: '${SMTP_FROM:-Parqueo <no-reply@parqueo.local>}'
+      INVENTORY_TOKEN: '${INVENTORY_TOKEN:-}'
+      SSO_TENANT_ID: '${SSO_TENANT_ID:-}'
+      SSO_CLIENT_ID: '${SSO_CLIENT_ID:-}'
+      SSO_CLIENT_SECRET: '${SSO_CLIENT_SECRET:-}'
+    volumes:
+      # Les pièces jointes vivent hors du conteneur : elles survivent aux
+      # reconstructions d'image.
+      - parqueo-uploads:/app/uploads
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '${PUBLIC_PORT:-8080}:80'
+
+volumes:
+  parqueo-db:
+  parqueo-uploads:
