@@ -93,16 +93,19 @@ export function Field({ label, children }) {
   );
 }
 
+// Colonne flex : quand la carte reçoit une hauteur (h-full dans la grille du
+// tableau de bord), le corps occupe la place restante sous l'en-tête au lieu de
+// laisser un vide en bas. Sans hauteur imposée, le rendu est inchangé.
 export function Card({ title, action, children, className = '' }) {
   return (
-    <section className={`rounded-lg border border-line bg-surface ${className}`}>
+    <section className={`flex flex-col rounded-lg border border-line bg-surface ${className}`}>
       {(title || action) && (
-        <header className="flex items-center justify-between border-b border-line px-4 py-2.5">
+        <header className="flex shrink-0 items-center justify-between border-b border-line px-4 py-2.5">
           <h2 className="text-sm font-semibold">{title}</h2>
           {action}
         </header>
       )}
-      {children}
+      <div className="min-h-0 flex-1">{children}</div>
     </section>
   );
 }

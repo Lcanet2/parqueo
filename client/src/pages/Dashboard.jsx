@@ -267,7 +267,12 @@ export default function Dashboard() {
           return (
             <div
               key={item.id}
-              className={`${SIZE_CLASS[item.size] ?? SIZE_CLASS[2]} ${dragId === item.id ? 'opacity-40' : ''}`}
+              // Colonne flex : la carte occupe la hauteur restante sous la
+              // poignée d'édition, et remplit donc toute la cellule de grille —
+              // les cartes d'une même rangée s'arrêtent au même niveau.
+              className={`flex flex-col ${SIZE_CLASS[item.size] ?? SIZE_CLASS[2]} ${
+                dragId === item.id ? 'opacity-40' : ''
+              }`}
               onDragOver={editing ? (e) => onDragOver(e, item.id) : undefined}
               onDrop={editing ? (e) => e.preventDefault() : undefined}
             >
@@ -321,7 +326,9 @@ export default function Dashboard() {
                   ))}
                 </div>
               )}
-              <Widget data={data} config={item.config} />
+              <div className="min-h-0 flex-1">
+                <Widget data={data} config={item.config} />
+              </div>
             </div>
           );
         })}

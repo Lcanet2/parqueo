@@ -199,7 +199,7 @@ function StatWidget({ data, config }) {
   const accent = metric.accent && value > 0;
   return (
     <Link to={metric.to} className="block h-full">
-      <div className="flex h-full flex-col justify-between rounded-lg border border-line bg-surface px-4 py-3 transition-colors hover:border-ink-faint">
+      <div className="flex h-full flex-col justify-center rounded-lg border border-line bg-surface px-4 py-3 transition-colors hover:border-ink-faint">
         <div className="text-xs font-medium text-ink-soft">{metric.label}</div>
         <div
           className="mt-1 text-2xl font-semibold tabular-nums tracking-tight"
@@ -220,7 +220,7 @@ function StatusBarWidget({ data }) {
     count: data.stats.parStatut[key] ?? 0,
   }));
   return (
-    <Card title="Répartition par statut" action={<span className="text-xs tabular-nums text-ink-faint">{data.stats.total} tickets</span>}>
+    <Card className="h-full min-h-[9.5rem]" title="Répartition par statut" action={<span className="text-xs tabular-nums text-ink-faint">{data.stats.total} tickets</span>}>
       <SegmentedBar items={items} total={data.stats.total} linkFor={(k) => `/tickets?status=${k}`} />
     </Card>
   );
@@ -231,7 +231,7 @@ function WeeklyFlowWidget({ data, config }) {
   // Le serveur en renvoie douze : on garde les dernières demandées.
   const semaines = data.stats.hebdo.slice(-weeks);
   return (
-    <Card title="Flux hebdomadaire" action={<span className="text-xs text-ink-faint">clôture ≈ dernière activité</span>}>
+    <Card className="h-full min-h-[9.5rem]" title="Flux hebdomadaire" action={<span className="text-xs text-ink-faint">clôture ≈ dernière activité</span>}>
       <WeeklyColumns
         semaines={semaines}
         series={[
@@ -250,7 +250,7 @@ function CategoryBarsWidget({ data, config }) {
     .filter((r) => r.count > 0)
     .sort((a, b) => b.count - a.count);
   return (
-    <Card title="Tickets par catégorie" action={<span className="text-xs text-ink-faint">{config.scope === 'all' ? 'tous' : 'ouverts'}</span>}>
+    <Card className="h-full min-h-[9.5rem]" title="Tickets par catégorie" action={<span className="text-xs text-ink-faint">{config.scope === 'all' ? 'tous' : 'ouverts'}</span>}>
       <BarList rows={rows} emptyText="Aucun ticket" />
     </Card>
   );
@@ -263,7 +263,7 @@ function PriorityBarsWidget({ data }) {
     count: data.stats.ouvertsParPriorite[key] ?? 0,
   }));
   return (
-    <Card title="Tickets ouverts par priorité">
+    <Card className="h-full min-h-[9.5rem]" title="Tickets ouverts par priorité">
       <BarList rows={rows} emptyText="Aucun ticket ouvert" />
     </Card>
   );
@@ -274,7 +274,7 @@ function TechLoadWidget({ data }) {
     .map((a) => ({ label: a.nom, count: a.count }))
     .slice(0, 8);
   return (
-    <Card title="Charge par technicien">
+    <Card className="h-full min-h-[9.5rem]" title="Charge par technicien">
       <BarList rows={rows} emptyText="Aucun ticket ouvert" />
     </Card>
   );
@@ -283,7 +283,7 @@ function TechLoadWidget({ data }) {
 function TeamLoadWidget({ data }) {
   const rows = data.stats.ouvertsParEquipe.map((e) => ({ label: e.nom, count: e.count }));
   return (
-    <Card title="Charge par équipe">
+    <Card className="h-full min-h-[9.5rem]" title="Charge par équipe">
       <BarList rows={rows} emptyText="Aucun ticket ouvert" />
     </Card>
   );
@@ -292,7 +292,7 @@ function TeamLoadWidget({ data }) {
 function AgeBarsWidget({ data }) {
   const rows = data.stats.ageOuverts;
   return (
-    <Card title="Âge des tickets ouverts">
+    <Card className="h-full min-h-[9.5rem]" title="Âge des tickets ouverts">
       <BarList rows={rows} color="var(--color-status-progress)" emptyText="Aucun ticket ouvert" />
     </Card>
   );
@@ -304,7 +304,7 @@ function AssetTypeBarsWidget({ data }) {
     count: data.assets.filter((a) => a.type === key).length,
   }));
   return (
-    <Card title="Actifs par type">
+    <Card className="h-full min-h-[9.5rem]" title="Actifs par type">
       <BarList rows={rows} emptyText="Aucun actif" />
     </Card>
   );
@@ -318,7 +318,7 @@ function AssetStatusBarWidget({ data }) {
     count: data.assets.filter((a) => a.status === key).length,
   }));
   return (
-    <Card title="État du parc" action={<span className="text-xs tabular-nums text-ink-faint">{data.assets.length} actifs</span>}>
+    <Card className="h-full min-h-[9.5rem]" title="État du parc" action={<span className="text-xs tabular-nums text-ink-faint">{data.assets.length} actifs</span>}>
       <SegmentedBar items={items} total={data.assets.length} />
     </Card>
   );
@@ -373,7 +373,7 @@ function DonutWidget({ data, config }) {
   }
 
   return (
-    <Card title={title}>
+    <Card className="h-full min-h-[9.5rem]" title={title}>
       <DonutChart items={items} total={total} centerLabel={centerLabel} />
     </Card>
   );
@@ -394,7 +394,7 @@ function TicketListWidget({ data, config }) {
   const limit = Number(config.limit) || 5;
   const tickets = (data.stats.listes[cle] ?? []).slice(0, limit);
   return (
-    <Card
+    <Card className="h-full min-h-[9.5rem]"
       title={TICKET_SCOPES[cle]}
       action={
         <Link to="/tickets" className="text-xs text-ink-soft hover:text-accent">
@@ -412,7 +412,7 @@ function AssetListWidget({ data, config }) {
   const pool = config.scope === 'repair' ? data.assets.filter((a) => a.status === 'in_repair') : data.assets;
   const assets = pool.slice(0, limit);
   return (
-    <Card
+    <Card className="h-full min-h-[9.5rem]"
       title={config.scope === 'repair' ? 'Actifs en réparation' : 'Actifs récents'}
       action={
         <Link to="/inventaire" className="text-xs text-ink-soft hover:text-accent">
