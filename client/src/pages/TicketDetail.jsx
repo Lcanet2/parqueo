@@ -332,7 +332,7 @@ export default function TicketDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-page space-y-4">
       <div>
         <div className="mb-1 text-xs text-ink-faint">
           <Link to="/tickets" className="hover:text-accent">Tickets</Link> / #{ticket.id}
@@ -349,7 +349,9 @@ export default function TicketDetail() {
 
       <ErrorText>{error}</ErrorText>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[1fr_260px]">
+      {/* La conversation est bornée : au-delà, les messages deviennent des
+          lignes de 200 caractères. Le panneau latéral absorbe le reste. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1100px)_320px]">
         <Card title={`Conversation · ${messageCount} message${messageCount > 1 ? 's' : ''}`}>
           <ul className="space-y-4 px-4 py-4">
             <Message

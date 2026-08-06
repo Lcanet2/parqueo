@@ -118,7 +118,7 @@ export default function FormsTab() {
   if (draft) {
     return (
       <Card title={draft.id ? `Modifier « ${draft.name} »` : 'Nouveau formulaire'}>
-        <form onSubmit={save} className="space-y-4 p-4">
+        <form onSubmit={save} className="max-w-3xl space-y-4 p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Nom (devient le titre des tickets)">
               <Input value={draft.name} onChange={(e) => set('name', e.target.value)} required placeholder="Ex. : Demande de matériel" />

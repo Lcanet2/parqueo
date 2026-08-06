@@ -4,6 +4,15 @@
 @theme {
   --font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
 
+  /* Largeurs de page.
+     Les écrans denses (tableaux, grilles de widgets, inventaire) prennent
+     `max-w-page` : sur un écran large, se borner à 1150 px laissait de grandes
+     bandes vides de part et d'autre alors que les colonnes manquaient d'air.
+     Les écrans de lecture et de saisie gardent une largeur courte : une ligne
+     de texte de 150 caractères ne se lit pas, et un formulaire étiré non plus. */
+  --container-page: 100rem; /* 1600 px */
+  --container-liste: 64rem; /* 1024 px — listes simples, catalogue de demandes */
+
   /* Palette sobre inspirée n8n, version claire */
   --color-canvas: #f7f7f8;
   --color-surface: #ffffff;

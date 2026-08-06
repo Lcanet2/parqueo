@@ -32,7 +32,7 @@ export default function Admin() {
   const [tab, setTab] = useState('users');
 
   return (
-    <div className={`mx-auto space-y-4 ${tab === 'workflows' ? 'max-w-none' : 'max-w-4xl'}`}>
+    <div className="mx-auto max-w-page space-y-4">
       <h1 className="text-lg font-semibold tracking-tight">Administration</h1>
 
       <div className="flex gap-1 border-b border-line">
@@ -250,7 +250,7 @@ function UsersTab() {
   return (
     <div className="space-y-4">
       <Card title="Créer un compte">
-        <form onSubmit={createUser} className="grid gap-3 p-4 sm:grid-cols-2">
+        <form onSubmit={createUser} className="grid max-w-3xl gap-3 p-4 sm:grid-cols-2">
           <Field label="Nom">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
@@ -448,7 +448,7 @@ function SimpleListTab({ endpoint, label, placeholder }) {
 
   return (
     <Card title={`${label.charAt(0).toUpperCase() + label.slice(1)}s (${items?.length ?? 0})`}>
-      <form onSubmit={create} className="flex gap-2 border-b border-line p-3">
+      <form onSubmit={create} className="flex max-w-xl gap-2 border-b border-line p-3">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} required />
         <Button variant="primary" type="submit">Ajouter</Button>
       </form>

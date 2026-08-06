@@ -39,7 +39,7 @@ export default function Kb() {
   const paged = usePaged(articles ?? []);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-liste space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold tracking-tight">Aide &amp; solutions</h1>
         {isStaff && (

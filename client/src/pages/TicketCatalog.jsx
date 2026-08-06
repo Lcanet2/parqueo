@@ -12,7 +12,7 @@ export default function TicketCatalog() {
   if (!forms) return <Spinner />;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-liste space-y-4">
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Nouvelle demande</h1>
         <p className="mt-1 text-sm text-ink-soft">

@@ -49,7 +49,7 @@ export default function Software() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-page space-y-4">
       <h1 className="text-lg font-semibold tracking-tight">Logiciels</h1>
 
       <Card>
