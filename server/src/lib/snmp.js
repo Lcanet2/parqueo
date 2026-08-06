@@ -37,16 +37,38 @@ export function inferAssetType(sysDescr = '') {
 }
 
 // Résultat d'un scan SNMP → format normalisé d'inventaire (source scan). Les
-// équipements réseau n'ont pas d'UUID matériel : on fabrique une identité stable
-// à partir du nom système (sinon de l'IP) pour dédoublonner d'un scan à l'autre.
-export function snmpToInventory({ ip, sysName, sysDescr, serial } = {}) {
-  const name = sysName?.trim() || ip;
+// équipements réseau n'ont pas d'UUID matériel : on fabrique une identité de
+// substitution pour dédoublonner d'un scan à l'autre. Trois niveaux, du plus
+// solide au plus fragile :
+//
+//   1. numéro de série (entPhysicalSerialNum) — survit au renommage et au
+//      changement d'IP, et distingue deux équipements de même modèle ;
+//   2. sysObjectID + nom système — le sysObjectID (famille de matériel) évite
+//      qu'un switch et une imprimante portant le même nom ne fusionnent ;
+//   3. adresse IP — dernier recours, fragile en DHCP (voir la note ci-dessous).
+//
+// Le niveau 1 sert aussi quand le nom change : l'ingestion retrouve l'actif par
+// son numéro de série et réécrit l'uuid, sans créer de doublon.
+//
+// Limite connue : sans numéro de série, deux équipements laissés au nom d'usine
+// par défaut sur des IP différentes restent indistinguables. Renseigner un nom
+// système unique (ou activer entPhysicalSerialNum) est la bonne parade.
+export function snmpToInventory({ ip, sysName, sysDescr, serial, sysObjectId } = {}) {
+  const cleanSerial = serial?.trim() || null;
+  const cleanName = sysName?.trim() || null;
+  const name = cleanName || ip;
+
+  let uuid;
+  if (cleanSerial) uuid = `snmp:sn:${cleanSerial}`;
+  else if (cleanName) uuid = `snmp:oid:${sysObjectId?.trim() || 'inconnu'}:${cleanName}`;
+  else uuid = `snmp:ip:${ip}`;
+
   return {
-    uuid: `snmp:${name}`,
-    serial: serial?.trim() || null,
+    uuid,
+    serial: cleanSerial,
     name,
     type: inferAssetType(sysDescr),
     model: sysDescr?.trim() || null,
-    raw: { ip, sysName, sysDescr, serial },
+    raw: { ip, sysName, sysDescr, serial, sysObjectId },
   };
 }

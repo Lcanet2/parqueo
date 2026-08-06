@@ -16,6 +16,9 @@ import { ingest } from './inventory.js';
 const OID_SYS_DESCR = '1.3.6.1.2.1.1.1.0';
 const OID_SYS_NAME = '1.3.6.1.2.1.1.5.0';
 const OID_SERIAL = '1.3.6.1.2.1.47.1.1.1.1.11.1'; // entPhysicalSerialNum (1re entité)
+// sysObjectID : identifie la famille de matériel. Sert à distinguer deux
+// équipements de types différents portant le même nom système (voir lib/snmp.js).
+const OID_SYS_OBJECT = '1.3.6.1.2.1.1.2.0';
 
 export function snmpEnabled() {
   return process.env.SNMP_ENABLED === 'true' && Boolean(process.env.SNMP_RANGES);
@@ -49,14 +52,14 @@ function queryHost(ip) {
       resolve(value);
     };
 
-    session.get([OID_SYS_DESCR, OID_SYS_NAME, OID_SERIAL], (err, varbinds) => {
+    session.get([OID_SYS_DESCR, OID_SYS_NAME, OID_SERIAL, OID_SYS_OBJECT], (err, varbinds) => {
       if (err || !varbinds) return finish(null);
       const read = (vb) => (vb && !snmp.isVarbindError(vb) ? vb.value?.toString() : null);
       const sysDescr = read(varbinds[0]);
       const sysName = read(varbinds[1]);
       // Sans sysDescr ni sysName, l'hôte ne « parle » pas vraiment SNMP : on ignore.
       if (!sysDescr && !sysName) return finish(null);
-      finish({ ip, sysDescr, sysName, serial: read(varbinds[2]) });
+      finish({ ip, sysDescr, sysName, serial: read(varbinds[2]), sysObjectId: read(varbinds[3]) });
     });
 
     // Filet de sécurité si le callback ne revient jamais.
