@@ -1,5 +1,16 @@
 // Catalogue de blocs et déclencheurs partagé entre la liste et le canvas.
 import { TICKET_STATUS, TICKET_PRIORITY } from './labels.js';
+import {
+  IconUsers,
+  IconUserCheck,
+  IconFlag,
+  IconStatus,
+  IconNote,
+  IconMail,
+  IconLink,
+  IconBranch,
+  IconHourglass,
+} from '../components/icons.jsx';
 
 export const TRIGGERS = {
   ticket_created: { label: 'Un ticket est créé', short: 'Ticket créé' },
@@ -7,17 +18,19 @@ export const TRIGGERS = {
 };
 
 // type → libellé, icône, couleur. `gate` = bloc d'attente (le ticket s'y parque).
+// `icon` est un composant du jeu SVG maison : les emoji d'origine juraient avec
+// le reste de l'interface et dépendaient de la police emoji du poste.
 export const STEP_CATALOG = {
-  assign_team: { label: 'Affecter à une équipe', icon: '👥', accent: 'var(--color-status-waiting)' },
-  assign_user: { label: 'Assigner à une personne', icon: '🙋', accent: 'var(--color-accent)' },
-  set_priority: { label: 'Changer la priorité', icon: '⚑', accent: 'var(--color-status-progress)' },
-  set_status: { label: 'Changer le statut', icon: '🔄', accent: 'var(--color-status-new)' },
-  add_note: { label: 'Ajouter une note', icon: '📝', accent: 'var(--color-ink-soft)' },
-  send_email: { label: 'Envoyer un email', icon: '✉️', accent: 'var(--color-status-resolved)' },
-  webhook: { label: 'Webhook (n8n, Zapier…)', icon: '🔗', accent: 'var(--color-status-closed)' },
-  condition: { label: 'Condition (oui / non)', icon: '❓', accent: 'var(--color-status-new)', branch: true },
-  wait_assigned: { label: 'Attendre la prise en charge', icon: '⏳', accent: 'var(--color-status-progress)', gate: true },
-  wait_status: { label: 'Attendre un statut', icon: '⏳', accent: 'var(--color-status-progress)', gate: true },
+  assign_team: { label: 'Affecter à une équipe', icon: IconUsers, accent: 'var(--color-status-waiting)' },
+  assign_user: { label: 'Assigner à une personne', icon: IconUserCheck, accent: 'var(--color-accent)' },
+  set_priority: { label: 'Changer la priorité', icon: IconFlag, accent: 'var(--color-status-progress)' },
+  set_status: { label: 'Changer le statut', icon: IconStatus, accent: 'var(--color-status-new)' },
+  add_note: { label: 'Ajouter une note', icon: IconNote, accent: 'var(--color-ink-soft)' },
+  send_email: { label: 'Envoyer un email', icon: IconMail, accent: 'var(--color-status-resolved)' },
+  webhook: { label: 'Webhook (n8n, Zapier…)', icon: IconLink, accent: 'var(--color-status-closed)' },
+  condition: { label: 'Condition (oui / non)', icon: IconBranch, accent: 'var(--color-status-new)', branch: true },
+  wait_assigned: { label: 'Attendre la prise en charge', icon: IconHourglass, accent: 'var(--color-status-progress)', gate: true },
+  wait_status: { label: 'Attendre un statut', icon: IconHourglass, accent: 'var(--color-status-progress)', gate: true },
 };
 
 // Blocs proposés selon le déclencheur : les attentes seulement à la création.

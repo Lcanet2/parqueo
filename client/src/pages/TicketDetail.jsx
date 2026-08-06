@@ -227,7 +227,8 @@ export default function TicketDetail() {
 
   useEffect(() => {
     load();
-    if (isStaff) api.get('/users/assignable').then(setAssignables);
+    // Menu d'assignation : accessoire, son échec ne doit pas casser le ticket.
+    if (isStaff) api.get('/users/assignable').then(setAssignables).catch(() => {});
   }, [load, isStaff]);
 
   if (notFound) {
@@ -563,7 +564,21 @@ export default function TicketDetail() {
               {ticket.satisfaction !== null && (
                 <div>
                   <dt className="text-xs text-ink-faint">Satisfaction du demandeur</dt>
-                  <dd>{ticket.satisfaction === 1 ? '👍 Satisfait' : '👎 Insatisfait'}</dd>
+                  <dd>
+                    <Badge
+                      label={ticket.satisfaction === 1 ? 'Satisfait' : 'Insatisfait'}
+                      fg={
+                        ticket.satisfaction === 1
+                          ? 'var(--color-status-resolved)'
+                          : 'var(--color-accent)'
+                      }
+                      bg={
+                        ticket.satisfaction === 1
+                          ? 'var(--color-status-resolved-bg)'
+                          : 'var(--color-accent-soft)'
+                      }
+                    />
+                  </dd>
                 </div>
               )}
             </dl>

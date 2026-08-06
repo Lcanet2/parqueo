@@ -114,3 +114,86 @@ export const IconChevronRight = (p) => (
     <polyline points="9 18 15 12 9 6" />
   </Icon>
 );
+
+// --- Blocs de workflow ---
+// Même tracé lucide que le reste : le canvas utilisait des emoji, qui juraient
+// avec l'interface et dépendaient de la police emoji du poste.
+
+export const IconUsers = (p) => (
+  <Icon {...p}>
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </Icon>
+);
+
+export const IconUserCheck = (p) => (
+  <Icon {...p}>
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <polyline points="16 11 18 13 22 9" />
+  </Icon>
+);
+
+export const IconFlag = (p) => (
+  <Icon {...p}>
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+    <line x1="4" y1="22" x2="4" y2="15" />
+  </Icon>
+);
+
+export const IconStatus = (p) => (
+  <Icon {...p}>
+    <path d="M21 12a9 9 0 1 1-3.5-7.1" />
+    <polyline points="21 3 21 9 15 9" />
+  </Icon>
+);
+
+export const IconNote = (p) => (
+  <Icon {...p}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="8" y1="13" x2="15" y2="13" />
+    <line x1="8" y1="17" x2="13" y2="17" />
+  </Icon>
+);
+
+export const IconMail = (p) => (
+  <Icon {...p}>
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="m2 7 10 6 10-6" />
+  </Icon>
+);
+
+export const IconLink = (p) => (
+  <Icon {...p}>
+    <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+    <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+  </Icon>
+);
+
+export const IconBranch = (p) => (
+  <Icon {...p}>
+    <circle cx="6" cy="4" r="2" />
+    <circle cx="18" cy="20" r="2" />
+    <circle cx="6" cy="20" r="2" />
+    <path d="M6 6v4a4 4 0 0 0 4 4h4" />
+    <path d="M6 6v12" />
+  </Icon>
+);
+
+export const IconHourglass = (p) => (
+  <Icon {...p}>
+    <path d="M5 22h14" />
+    <path d="M5 2h14" />
+    <path d="M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22" />
+    <path d="M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2" />
+  </Icon>
+);
+
+export const IconZap = (p) => (
+  <Icon {...p}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </Icon>
+);

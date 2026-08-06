@@ -55,7 +55,7 @@ function Toggle({ checked, onChange }) {
 // Paramètres globaux (admin) : chaque changement est enregistré immédiatement
 // et s'applique à toute l'application.
 export default function Settings() {
-  const { settings, refresh } = useSettings();
+  const { settings, error: loadError, refresh } = useSettings();
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef(null);
@@ -93,7 +93,7 @@ export default function Settings() {
         Ces réglages s'appliquent immédiatement à tous les comptes.
       </p>
 
-      <ErrorText>{error}</ErrorText>
+      <ErrorText>{error ?? loadError}</ErrorText>
 
       <Card title="Tableaux de bord">
         <div className="divide-y divide-line">
@@ -147,7 +147,7 @@ export default function Settings() {
           </Row>
           <Row
             label="Enquête de satisfaction"
-            hint="Liens 👍/👎 dans l'email envoyé à la résolution d'un ticket"
+            hint="Deux liens « satisfait / insatisfait » dans l'email envoyé à la résolution d'un ticket"
           >
             {toggle('satisfactionSurvey')}
           </Row>

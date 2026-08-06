@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { Button, Input, Select, Textarea, Field, ErrorText } from './ui.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../lib/labels.js';
 import { STEP_CATALOG, TRIGGERS, catalogFor, defaultStepConfig, CONDITION_FIELDS } from '../lib/workflowBlocks.js';
+import { IconZap } from './icons.jsx';
 
 // Éditeur de workflow en canvas façon n8n : blocs déplaçables reliés par des
 // fils, pan et zoom. Un bloc « condition » a deux sorties (oui / non). Le graphe
@@ -276,7 +277,9 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
                   onClick={() => addNode(type)}
                   className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-canvas"
                 >
-                  <span>{spec.icon}</span>
+                  <span className="text-ink-soft">
+                    <spec.icon />
+                  </span>
                   {spec.label}
                   {spec.gate && <span className="ml-auto text-xs text-ink-faint">attente</span>}
                   {spec.branch && <span className="ml-auto text-xs text-ink-faint">branche</span>}
@@ -329,7 +332,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
             <NodeBox
               pos={model.triggerPos}
               accent="var(--color-accent)"
-              icon="⚡"
+              Icon={IconZap}
               title="Quand"
               subtitle={TRIGGERS[meta.trigger].short}
               selected={selected === 'trigger'}
@@ -347,7 +350,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
                   key={n.key}
                   pos={n}
                   accent={spec.accent}
-                  icon={spec.icon}
+                  Icon={spec.icon}
                   title={spec.label}
                   subtitle={nodeSummary(n, refs)}
                   gate={spec.gate}
@@ -432,7 +435,7 @@ function canConnect(from, to, conns) {
   return true;
 }
 
-function NodeBox({ pos, accent, icon, title, subtitle, gate, selected, hasIn, outs, minHeight, onDown, onOut, onDelete, fromKey }) {
+function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, outs, minHeight, onDown, onOut, onDelete, fromKey }) {
   return (
     <div
       onPointerDown={onDown}
@@ -444,8 +447,11 @@ function NodeBox({ pos, accent, icon, title, subtitle, gate, selected, hasIn, ou
       style={{ left: pos.x, top: pos.y, minHeight, borderColor: selected ? 'var(--color-accent)' : 'var(--color-line)' }}
     >
       <div className="flex items-center gap-2 px-3 py-2">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs" style={{ background: `${accent}1a` }}>
-          {icon}
+        <span
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+          style={{ background: `${accent}1a`, color: accent }}
+        >
+          <Icon size={14} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{title}</div>
