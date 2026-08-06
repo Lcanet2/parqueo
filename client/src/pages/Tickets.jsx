@@ -48,6 +48,7 @@ export default function Tickets() {
   const status = params.get('status') ?? '';
   const priority = params.get('priority') ?? '';
   const assignee = params.get('assignee') ?? '';
+  const author = params.get('author') ?? '';
   const category = params.get('category') ?? '';
   const team = params.get('team') ?? '';
   const sort = params.get('sort') ?? '';
@@ -73,6 +74,7 @@ export default function Tickets() {
     if (priority) p.set('priority', priority);
     if (assignee === 'me') p.set('assigneeId', user.id);
     else if (assignee) p.set('assigneeId', assignee);
+    if (author === 'me') p.set('authorId', user.id);
     if (category) p.set('categoryId', category);
     if (team) p.set('teamId', team);
     if (sort) p.set('sort', sort);
@@ -80,7 +82,7 @@ export default function Tickets() {
     p.set('page', page);
     p.set('pageSize', pageSize);
     return p.toString();
-  }, [status, priority, assignee, category, team, sort, q, page, pageSize, user.id]);
+  }, [status, priority, assignee, author, category, team, sort, q, page, pageSize, user.id]);
 
   // Liste paginée côté serveur ; la réponse inclut les compteurs par statut pour les chips.
   const { data, error, loading, reload } = useResource(() => api.get(`/tickets?${query}`), [query]);
@@ -108,12 +110,13 @@ export default function Tickets() {
     setParams(next, { replace: true });
   }
 
-  const hasFilters = priority || assignee || category || team || q;
+  const hasFilters = priority || assignee || author || category || team || q;
   const visible = loading || error ? null : data?.items ?? null;
   const totalAll = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
 
   const chips = [
     { value: '', label: 'Tous', count: totalAll },
+    { value: 'open', label: 'Ouverts', count: counts?.open ?? 0 },
     ...Object.entries(TICKET_STATUS).map(([value, s]) => ({
       value,
       label: s.label,
@@ -191,6 +194,10 @@ export default function Tickets() {
                 .map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
+            </Select>
+            <Select value={author} onChange={(e) => setFilter('author', e.target.value)} className="w-auto">
+              <option value="">Tous demandeurs</option>
+              <option value="me">Mes demandes</option>
             </Select>
             <Select value={team} onChange={(e) => setFilter('team', e.target.value)} className="w-auto">
               <option value="">Toutes équipes</option>

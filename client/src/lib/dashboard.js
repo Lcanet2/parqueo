@@ -11,11 +11,14 @@ export const isOpen = (t) => OPEN.includes(t.status);
 // calc reçoit { stats, assets, user } — les compteurs viennent de
 // GET /api/tickets/stats, agrégés en SQL. Auparavant chaque métrique
 // parcourait l'intégralité des tickets téléchargés dans le navigateur.
+//
+// `to` doit mener à la liste **exactement** filtrée sur ce que la tuile compte :
+// une tuile qui affiche 4 et ouvre une liste de 60 fait douter du chiffre.
 export const METRICS = {
   open_total: {
     label: 'Tickets ouverts',
     calc: ({ stats }) => stats.compteurs.ouverts,
-    to: '/tickets',
+    to: '/tickets?status=open',
   },
   new_total: {
     label: 'Nouveaux tickets',
@@ -26,19 +29,19 @@ export const METRICS = {
     label: 'À traiter (non assignés)',
     staffOnly: true,
     calc: ({ stats }) => stats.compteurs.nonAssignesOuverts,
-    to: '/tickets?status=new',
+    to: '/tickets?status=open&assignee=none',
   },
   mine_assigned: {
     label: 'Mes tickets en cours',
     staffOnly: true,
     calc: ({ stats }) => stats.compteurs.mesAssignesOuverts,
-    to: '/tickets?assignee=me',
+    to: '/tickets?status=open&assignee=me',
   },
   high_open: {
     label: 'Priorité haute ouverte',
     accent: true,
     calc: ({ stats }) => stats.compteurs.hautesOuvertes,
-    to: '/tickets?priority=high',
+    to: '/tickets?status=open&priority=high',
   },
   waiting: {
     label: 'En attente',
@@ -53,7 +56,9 @@ export const METRICS = {
   created_7d: {
     label: 'Créés sur 7 jours',
     calc: ({ stats }) => stats.compteurs.crees7j,
-    to: '/tickets',
+    // Pas de filtre par date dans la liste : on trie au moins les plus récents
+    // en tête, plutôt que d'ouvrir la liste par défaut.
+    to: '/tickets?sort=id-desc',
   },
   resolved_7d: {
     label: 'Clôturés sur 7 jours',
@@ -63,7 +68,7 @@ export const METRICS = {
   my_open: {
     label: 'Mes tickets ouverts',
     calc: ({ stats }) => stats.compteurs.mesOuverts,
-    to: '/tickets',
+    to: '/tickets?status=open&author=me',
   },
   assets_total: {
     label: 'Actifs',

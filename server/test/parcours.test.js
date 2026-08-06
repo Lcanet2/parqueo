@@ -161,6 +161,8 @@ describe('pagination et filtres', () => {
       'closed',
       'in_progress',
       'new',
+      // « open » regroupe nouveau + en cours + en attente, pour la chip du même nom.
+      'open',
       'resolved',
       'waiting',
     ]);

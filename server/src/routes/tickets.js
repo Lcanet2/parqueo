@@ -26,6 +26,19 @@ const router = Router();
 const STATUSES = ['new', 'in_progress', 'waiting', 'resolved', 'closed'];
 const PRIORITIES = ['low', 'medium', 'high'];
 
+// « Ouvert » n'est pas un statut mais un regroupement : nouveau, en cours et en
+// attente — soit « ce qu'il reste à traiter ». C'est le filtre le plus utile au
+// quotidien, et il n'était pas exprimable : la liste ne prenait qu'un statut
+// unique. D'où des tuiles de tableau de bord qui comptaient les tickets ouverts
+// mais renvoyaient vers la liste complète.
+const OPEN = ['new', 'in_progress', 'waiting'];
+
+function statusWhere(status) {
+  if (status === 'open') return { status: { in: OPEN } };
+  if (STATUSES.includes(status)) return { status };
+  return null;
+}
+
 // Tri par colonne demandé depuis l'en-tête du tableau, au format « colonne-direction »
 // (ex. status-asc). status et priority sont des enums Postgres : ils se trient dans
 // l'ordre de définition (new→closed, low→high), pas alphabétiquement.
@@ -131,7 +144,7 @@ router.use(authRequired);
 // de tickets par statut (hors filtre statut) pour les chips de la liste.
 // Sans ?page : tableau complet (dashboard, compatibilité).
 router.get('/', async (req, res) => {
-  const { status, priority, assigneeId, categoryId, teamId, q, sort, page, pageSize } = req.query;
+  const { status, priority, assigneeId, authorId, categoryId, teamId, q, sort, page, pageSize } = req.query;
   const where = { ...visibilityWhere(req.user) };
 
   if (priority && PRIORITIES.includes(priority)) where.priority = priority;
@@ -139,24 +152,34 @@ router.get('/', async (req, res) => {
   else if (assigneeId) where.assigneeId = Number(assigneeId) || undefined;
   if (categoryId) where.categoryId = Number(categoryId) || undefined;
   if (teamId) where.teamId = Number(teamId) || undefined;
-  if (q) {
-    where.AND = [
-      {
-        OR: [
-          { title: { contains: q, mode: 'insensitive' } },
-          { description: { contains: q, mode: 'insensitive' } },
-        ],
-      },
-    ];
+
+  // Conditions cumulées dans AND, pour qu'elles ne puissent que **restreindre**
+  // la visibilité. `authorId` porte la même clé que la visibilité d'un
+  // utilisateur final ({ authorId: soi }) : l'affecter directement l'écrasait
+  // et ouvrait les tickets d'autrui. Le AND conserve les deux conditions.
+  const et = [];
+  if (authorId) {
+    const n = Number(authorId);
+    if (Number.isInteger(n) && n > 0) et.push({ authorId: n });
   }
+  if (q) {
+    et.push({
+      OR: [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ],
+    });
+  }
+  if (et.length) where.AND = et;
 
   const orderBy = resolveOrderBy(sort);
 
-  const statusFilter = status && STATUSES.includes(status) ? status : null;
+  const filtreStatut = statusWhere(status);
+  const whereListe = { ...where, ...filtreStatut };
 
   if (page === undefined) {
     const tickets = await prisma.ticket.findMany({
-      where: statusFilter ? { ...where, status: statusFilter } : where,
+      where: whereListe,
       include: ticketInclude,
       orderBy,
     });
@@ -172,10 +195,13 @@ router.get('/', async (req, res) => {
   const grouped = await prisma.ticket.groupBy({ by: ['status'], where, _count: true });
   const counts = Object.fromEntries(STATUSES.map((s) => [s, 0]));
   for (const g of grouped) counts[g.status] = g._count;
+  counts.open = OPEN.reduce((n, s) => n + counts[s], 0);
 
-  const total = statusFilter ? counts[statusFilter] : grouped.reduce((sum, g) => sum + g._count, 0);
+  const total = filtreStatut
+    ? counts[status === 'open' ? 'open' : status]
+    : grouped.reduce((sum, g) => sum + g._count, 0);
   const items = await prisma.ticket.findMany({
-    where: statusFilter ? { ...where, status: statusFilter } : where,
+    where: whereListe,
     include: ticketInclude,
     orderBy,
     ...(all ? {} : { skip, take }),
