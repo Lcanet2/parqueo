@@ -1,15 +1,17 @@
-# Stack Parqueo construite depuis les sources — pour développer sur Parqueo ou
-# en modifier le code.
-#
-#   cp .env.docker.example .env
-#   docker compose up -d
-#
-# Pour INSTALLER Parqueo, ne partez pas de ce fichier : il reconstruit les deux
-# images à chaque fois. Utilisez l'installeur, qui tire les images publiées :
+# Stack Parqueo de production : images publiées, rien à construire, TLS
+# automatique.
 #
 #   curl -fsSL https://parqueo.fr/install.sh | sh
 #
-# ou docker-compose.prod.yml directement (voir docs/installation.md).
+# ou, à la main :
+#
+#   curl -fsSL https://raw.githubusercontent.com/Lcanet2/parqueo/main/docker-compose.prod.yml -o docker-compose.yml
+#   curl -fsSL https://raw.githubusercontent.com/Lcanet2/parqueo/main/.env.docker.example -o .env
+#   # renseigner DOMAIN, générer les secrets, puis :
+#   docker compose up -d
+#
+# Mise à jour :   docker compose pull && docker compose up -d
+# Sauvegarde  :   docker compose exec -T db pg_dump -U parqueo parqueo | gzip > parqueo-$(date +%F).sql.gz
 
 services:
   db:
@@ -17,7 +19,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-parqueo}
-      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?manquant — copiez .env.docker.example vers .env}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?manquant — relancez install.sh ou renseignez .env}'
       POSTGRES_DB: ${POSTGRES_DB:-parqueo}
     volumes:
       - parqueo-db:/var/lib/postgresql/data
@@ -29,9 +31,7 @@ services:
       retries: 12
 
   api:
-    build:
-      context: .
-      dockerfile: server/Dockerfile
+    image: ghcr.io/lcanet2/parqueo-api:${PARQUEO_VERSION:-latest}
     restart: unless-stopped
     depends_on:
       db:
@@ -40,16 +40,18 @@ services:
       DATABASE_URL: 'postgresql://${POSTGRES_USER:-parqueo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-parqueo}?schema=public'
       # Aucune valeur par défaut : un secret partagé publiquement laisserait
       # n'importe qui forger un jeton d'administrateur.
-      JWT_SECRET: '${JWT_SECRET:?manquant — générez-en un, voir .env.docker.example}'
+      JWT_SECRET: '${JWT_SECRET:?manquant — relancez install.sh ou renseignez .env}'
       PORT: '4000'
       # Front et API partagent l'origine du conteneur web : CORS sans objet.
-      CLIENT_ORIGIN: '${PUBLIC_URL:-http://localhost:8080}'
-      APP_URL: '${PUBLIC_URL:-http://localhost:8080}'
+      # L'URL sert aux liens des emails et à la redirection SSO.
+      # Une seule source pour l'URL publique : sans elle, « https://${DOMAIN} »
+      # donnait « https:// » quand DOMAIN n'était pas défini — et compose
+      # avertissait à chaque commande. L'installeur renseigne PUBLIC_URL.
+      CLIENT_ORIGIN: '${PUBLIC_URL:-http://localhost}'
+      APP_URL: '${PUBLIC_URL:-http://localhost}'
       # Pose la catégorie et l'équipe par défaut sur une base vierge. Aucun
       # compte n'est créé : l'administrateur se crée à la première visite.
       SEED_ON_START: '${SEED_ON_START:-true}'
-      # Options — décommentez dans .env, voir server/.env.example et
-      # docs/installation.md §3 pour la référence complète.
       SMTP_HOST: '${SMTP_HOST:-}'
       SMTP_PORT: '${SMTP_PORT:-587}'
       SMTP_USER: '${SMTP_USER:-}'
@@ -61,7 +63,7 @@ services:
       SSO_CLIENT_SECRET: '${SSO_CLIENT_SECRET:-}'
     volumes:
       # Les pièces jointes vivent hors du conteneur : elles survivent aux
-      # reconstructions d'image.
+      # mises à jour d'image.
       - parqueo-uploads:/app/uploads
     healthcheck:
       test:
@@ -77,19 +79,19 @@ services:
       start_period: 40s
 
   web:
-    build:
-      context: .
-      dockerfile: client/Dockerfile
+    image: ghcr.io/lcanet2/parqueo-web:${PARQUEO_VERSION:-latest}
     restart: unless-stopped
     depends_on:
       - api
     environment:
-      # `:80` = HTTP simple. Renseignez un nom de domaine pour que Caddy demande
-      # un certificat — il faut alors aussi publier le port 443 (voir
-      # docker-compose.prod.yml).
-      SITE_ADDRESS: '${SITE_ADDRESS:-:80}'
+      # Un nom de domaine ici et Caddy obtient un certificat Let's Encrypt au
+      # premier démarrage, puis le renouvelle seul. Sans DOMAIN, HTTP simple.
+      SITE_ADDRESS: '${DOMAIN:-:80}'
     ports:
-      - '${PUBLIC_PORT:-8080}:80'
+      # 80 est nécessaire même en HTTPS : Let's Encrypt y valide le domaine, et
+      # Caddy s'en sert pour rediriger vers HTTPS.
+      - '80:80'
+      - '443:443'
     volumes:
       - parqueo-caddy:/data
 

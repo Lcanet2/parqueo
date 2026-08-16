@@ -30,28 +30,37 @@ formation.
 
 ---
 
-## Essayer en une commande
+## Installer en une commande
 
-Prérequis : Docker avec le plugin Compose.
+Prérequis : Docker avec le plugin Compose. Ni git, ni Node, ni les sources.
 
 ```sh
-git clone https://github.com/Lcanet2/parqueo.git && cd parqueo
-cp .env.docker.example .env
-printf 'JWT_SECRET=%s\n' "$(openssl rand -base64 48)" >> .env
-docker compose up -d
+curl -fsSL https://parqueo.fr/install.sh | sh
 ```
 
-Puis <http://localhost:8080> — compte `admin@parqueo.local` / `admin1234`,
-**à changer immédiatement** depuis « Mon compte ».
+Avec un nom de domaine, le certificat HTTPS est obtenu et renouvelé tout seul :
 
-La stack lance PostgreSQL, applique les migrations, crée le compte
-d'administration et sert le client derrière nginx sur la même origine que l'API.
-Pour arrêter : `docker compose down` (les données restent dans le volume
-`parqueo-db`) ou `docker compose down -v` (tout effacer).
+```sh
+curl -fsSL https://parqueo.fr/install.sh | sh -s -- --domaine support.entreprise.fr
+```
 
-> Le `docker compose` fourni sert à évaluer Parqueo et à démarrer vite. Pour une
-> vraie mise en production (TLS, sauvegardes, supervision), suivez la
-> [documentation d'installation](https://parqueo.fr/docs/installation/).
+Puis ouvrez l'adresse indiquée : **le premier écran vous fait créer votre compte
+administrateur**. Parqueo n'est livré avec aucun mot de passe par défaut.
+
+L'installeur tire les images publiées, génère les secrets, lance PostgreSQL,
+applique les migrations et sert le client derrière Caddy sur la même origine que
+l'API.
+
+| | |
+| --- | --- |
+| Mettre à jour | `docker compose pull && docker compose up -d` |
+| Sauvegarder | `docker compose exec -T db pg_dump -U parqueo parqueo \| gzip > parqueo.sql.gz` |
+| Arrêter | `docker compose down` — les données restent dans les volumes |
+| Tout effacer | `docker compose down -v` |
+
+Pour l'exploitation au quotidien (sauvegardes planifiées, supervision,
+restauration), suivez la
+[documentation d'installation](https://parqueo.fr/docs/installation/).
 
 ---
 
@@ -81,7 +90,7 @@ cd server
 npm ci
 cp .env.example .env          # renseigner DATABASE_URL et JWT_SECRET
 npx prisma migrate deploy
-npm run seed
+npm run seed                  # catégorie et équipe par défaut, aucun compte
 npm run dev                   # http://localhost:4000
 
 # Client (dans un autre terminal)
@@ -123,8 +132,14 @@ server/
 client/
   src/pages/       une page par route
   src/components/  briques d'interface partagées
-docs/              les trois documentations (source des PDF et du site)
+docker/            Caddyfile de l'image web
+install.sh         installeur : télécharge, génère les secrets, démarre
+docker-compose.prod.yml  stack de production (images publiées)
+docker-compose.yml       stack construite depuis les sources, pour développer
 ```
+
+Le premier compte se crée depuis l'interface (`POST /api/setup`), et cette route
+se referme dès qu'un compte existe.
 
 ---
 
