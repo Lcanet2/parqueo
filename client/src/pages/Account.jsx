@@ -65,8 +65,9 @@ export default function Account() {
         <div className="space-y-2 px-4 py-4">
           <ThemeChoice />
           <p className="text-xs text-ink-faint">
-            « Système » suit le réglage de votre appareil. Le choix est propre à ce
-            navigateur : il ne suit pas votre compte sur un autre poste.
+            Tant que vous n'avez rien choisi, Parqueo suit le réglage de votre
+            appareil. Votre choix est propre à ce navigateur : il ne suit pas
+            votre compte sur un autre poste.
           </p>
         </div>
       </Card>

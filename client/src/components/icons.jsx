@@ -326,12 +326,3 @@ export const IconMoon = (p) => (
     <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
   </Icon>
 );
-
-// « Système » : l'appareil, dont on suit le réglage. Un portable et non un
-// écran — IconInventory occupe déjà le tracé de l'écran de bureau.
-export const IconDevice = (p) => (
-  <Icon {...p}>
-    <rect x="3" y="4" width="18" height="12" rx="2" />
-    <line x1="2" y1="20" x2="22" y2="20" />
-  </Icon>
-);
