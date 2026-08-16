@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Select, Button } from './ui.jsx';
+import { IconArrowLeft, IconArrowRight } from './icons.jsx';
 
 // Appareil de pagination commun à toute l'appli (tableaux et listes) pour une
 // expérience uniforme : mêmes tailles de page et même pied « X–Y sur Z ».
@@ -41,8 +42,13 @@ export function Pagination({ total, page, pageSize, onPage, onPageSize, unit = '
   const to = Math.min(page * size, total);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2">
-      <span className="text-xs text-ink-soft">
+    <nav
+      aria-label="Pagination"
+      className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2"
+    >
+      {/* `aria-live` : après un changement de filtre ou de page, le nouveau
+          décompte est annoncé au lieu de ne changer qu'à l'écran. */}
+      <span className="text-xs tabular-nums text-ink-soft" aria-live="polite">
         {isAll || total <= size ? `${total} ${unit}${total > 1 ? 's' : ''}` : `${from}–${to} sur ${total}`}
       </span>
       <div className="flex items-center gap-2">
@@ -55,16 +61,21 @@ export function Pagination({ total, page, pageSize, onPage, onPageSize, unit = '
           </Select>
         </label>
         {!isAll && total > size && (
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <Button variant="ghost" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-              ← Précédent
+              <IconArrowLeft size={14} />
+              Précédent
             </Button>
+            <span className="px-1 text-xs tabular-nums text-ink-faint">
+              {page} / {pageCount}
+            </span>
             <Button variant="ghost" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
-              Suivant →
+              Suivant
+              <IconArrowRight size={14} />
             </Button>
           </div>
         )}
       </div>
-    </div>
+    </nav>
   );
 }

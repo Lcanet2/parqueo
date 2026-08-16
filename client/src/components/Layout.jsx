@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { Avatar } from './ui.jsx';
+import { Avatar, IconButton } from './ui.jsx';
 import Brand from './Brand.jsx';
 import { ROLE } from '../lib/labels.js';
 import {
@@ -15,9 +15,12 @@ import {
   IconLogout,
 } from './icons.jsx';
 
+// NavLink pose lui-même `aria-current="page"` sur le lien actif : l'état actif
+// n'est donc pas porté par la seule couleur d'accent.
 function navClass({ isActive }) {
   return [
-    'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors',
+    'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap',
+    '[@media(pointer:coarse)]:min-h-11',
     isActive
       ? 'bg-accent-soft font-medium text-accent'
       : 'text-ink-soft hover:bg-canvas hover:text-ink',
@@ -50,7 +53,7 @@ export default function Layout() {
   }
 
   const nav = (
-    <nav className="flex flex-col gap-0.5 md:flex-1">
+    <nav aria-label="Navigation principale" className="flex flex-col gap-0.5 md:flex-1">
       {links.map((l) => (
         <NavLink key={l.to} to={l.to} end={l.end} className={navClass}>
           <l.Icon />
@@ -62,6 +65,16 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen md:flex">
+      {/* Lien d'évitement : au clavier, la première tabulation d'une page permet
+          de sauter les huit liens de navigation répétés sur chaque écran. Il
+          n'apparaît qu'une fois focalisé. */}
+      <a
+        href="#contenu"
+        className="sr-only rounded-md bg-ink px-3 py-2 text-sm font-medium text-white focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50"
+      >
+        Aller au contenu
+      </a>
+
       {/* Sidebar desktop */}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-surface px-3 py-4 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
         <Link to="/" className="mb-6 px-3 text-[15px]">
@@ -81,14 +94,9 @@ export default function Layout() {
                 <span className="block text-xs text-ink-faint">{ROLE[user.role]}</span>
               </span>
             </Link>
-            <button
-              onClick={onLogout}
-              title="Se déconnecter"
-              aria-label="Se déconnecter"
-              className="shrink-0 cursor-pointer rounded-md p-1.5 text-ink-faint transition-colors hover:bg-canvas hover:text-accent"
-            >
+            <IconButton label="Se déconnecter" onClick={onLogout} variant="danger">
               <IconLogout />
-            </button>
+            </IconButton>
           </div>
         </div>
       </aside>
@@ -108,7 +116,7 @@ export default function Layout() {
             </button>
           </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-2 pb-2">
+        <nav aria-label="Navigation principale" className="flex gap-1 overflow-x-auto px-2 pb-2">
           {links.map((l) => (
             <NavLink key={l.to} to={l.to} end={l.end} className={navClass}>
               <l.Icon />
@@ -118,7 +126,9 @@ export default function Layout() {
         </nav>
       </header>
 
-      <main className="min-w-0 flex-1 px-4 py-5 md:px-8 md:py-6">
+      {/* `tabIndex={-1}` : sans lui, le lien d'évitement déplacerait le défilement
+          sans déplacer le focus clavier, qui repartirait du haut de la page. */}
+      <main id="contenu" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 focus:outline-none md:px-8 md:py-6">
         <Outlet />
       </main>
     </div>

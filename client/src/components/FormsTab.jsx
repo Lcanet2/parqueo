@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client.js';
-import { Button, Input, Select, Textarea, Field, Card, ErrorText, ErrorState, EmptyState, Spinner, Badge } from './ui.jsx';
+import {
+  Button,
+  Input,
+  Select,
+  Textarea,
+  Field,
+  Card,
+  ErrorText,
+  ErrorState,
+  EmptyState,
+  Spinner,
+  Badge,
+  IconButton,
+} from './ui.jsx';
+import { IconChevronUp, IconChevronDown, IconX } from './icons.jsx';
 import { TICKET_PRIORITY } from '../lib/labels.js';
 
 const FIELD_TYPES = [
@@ -194,10 +208,30 @@ export default function FormsTab() {
                       />
                       Requis
                     </label>
+                    {/* Le libellé accessible nomme le champ concerné : dans une
+                        liste de dix champs, « Monter » seul ne dit pas lequel. */}
                     <span className="flex gap-1 pb-1">
-                      <Button type="button" variant="ghost" onClick={() => moveField(idx, -1)} disabled={idx === 0}>↑</Button>
-                      <Button type="button" variant="ghost" onClick={() => moveField(idx, 1)} disabled={idx === draft.fields.length - 1}>↓</Button>
-                      <Button type="button" variant="ghost" onClick={() => set('fields', draft.fields.filter((_, i) => i !== idx))}>✕</Button>
+                      <IconButton
+                        label={`Monter le champ « ${f.label || idx + 1} »`}
+                        onClick={() => moveField(idx, -1)}
+                        disabled={idx === 0}
+                      >
+                        <IconChevronUp size={14} />
+                      </IconButton>
+                      <IconButton
+                        label={`Descendre le champ « ${f.label || idx + 1} »`}
+                        onClick={() => moveField(idx, 1)}
+                        disabled={idx === draft.fields.length - 1}
+                      >
+                        <IconChevronDown size={14} />
+                      </IconButton>
+                      <IconButton
+                        label={`Supprimer le champ « ${f.label || idx + 1} »`}
+                        variant="danger"
+                        onClick={() => set('fields', draft.fields.filter((_, i) => i !== idx))}
+                      >
+                        <IconX size={14} />
+                      </IconButton>
                     </span>
                   </div>
                   {f.type === 'select' && (

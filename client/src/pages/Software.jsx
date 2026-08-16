@@ -1,7 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { Badge, Card, Spinner, EmptyState, ErrorState } from '../components/ui.jsx';
+import {
+  Badge,
+  Card,
+  Spinner,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  PageHeader,
+  TableSkeleton,
+} from '../components/ui.jsx';
+import { IconX } from '../components/icons.jsx';
 import { useResource } from '../lib/useResource.js';
 import DataTable from '../components/DataTable.jsx';
 import { ASSET_TYPE, ASSET_STATUS } from '../lib/labels.js';
@@ -29,7 +39,18 @@ export default function Software() {
       label: 'Logiciel',
       value: (s) => s.name,
       filter: 'text',
-      render: (s) => <span className="font-medium">{s.name}</span>,
+      // Bouton et non simple texte : le détail s'ouvre dans le panneau du bas
+      // (pas de route dédiée), et la ligne doit rester actionnable au clavier.
+      render: (s) => (
+        <button
+          type="button"
+          onClick={() => openSoftware(s)}
+          aria-expanded={selected?.id === s.id}
+          className="cursor-pointer rounded-sm text-left font-medium hover:text-accent"
+        >
+          {s.name}
+        </button>
+      ),
     },
     {
       key: 'publisher',
@@ -50,19 +71,24 @@ export default function Software() {
 
   return (
     <div className="mx-auto max-w-page space-y-4">
-      <h1 className="text-lg font-semibold tracking-tight">Logiciels</h1>
+      <PageHeader
+        title="Logiciels"
+        description="Catalogue des logiciels remontés par l'inventaire. Sélectionnez-en un pour voir les postes concernés."
+      />
 
       <Card>
         {error ? (
           <ErrorState error={error} onRetry={reload} />
         ) : list === null ? (
-          <Spinner />
+          <TableSkeleton rows={8} columns={3} />
         ) : (
           <DataTable
             rows={list}
             columns={columns}
+            caption="Logiciels inventoriés"
             onRowClick={openSoftware}
-            emptyText="Aucun logiciel inventorié pour le moment"
+            emptyText="Aucun logiciel inventorié"
+            emptyHint="Les logiciels apparaissent ici dès qu'une source d'inventaire (agent GLPI, Intune) remonte les installations des postes."
           />
         )}
       </Card>
@@ -71,18 +97,17 @@ export default function Software() {
         <Card
           title={`${selected.name}${selected.publisher ? ` — ${selected.publisher}` : ''}`}
           action={
-            <button
-              onClick={() => setSelected(null)}
-              className="cursor-pointer text-xs text-ink-faint hover:text-ink"
-            >
-              Fermer
-            </button>
+            <IconButton label="Fermer le détail du logiciel" onClick={() => setSelected(null)}>
+              <IconX />
+            </IconButton>
           }
         >
           {loadingDetail || selected.installs === null ? (
             <Spinner />
           ) : selected.installs.length === 0 ? (
-            <EmptyState>Ce logiciel n'est installé sur aucun poste</EmptyState>
+            <EmptyState title="Aucune installation">
+              Ce logiciel n'est installé sur aucun poste de l'inventaire.
+            </EmptyState>
           ) : (
             <ul className="divide-y divide-line">
               {selected.installs.map((inst) => (

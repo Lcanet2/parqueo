@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, Badge, EmptyState } from './ui.jsx';
+import { compare, cycleSort, SortHeader } from './table.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY, formatDateTime } from '../lib/labels.js';
 
 // Rangs d'ordre pour le tri local (widgets) — l'ordre des clés dans labels.js
@@ -19,52 +20,32 @@ const COLUMNS = {
   updated: { label: 'Mis à jour', value: (t) => new Date(t.updatedAt).getTime() },
 };
 
-function compare(a, b) {
-  if (a < b) return -1;
-  if (a > b) return 1;
-  return 0;
-}
-
-// Cycle d'un en-tête : décroissant → croissant → sans tri (null).
-function cycle(current, key) {
-  if (current?.key !== key) return { key, dir: 'desc' };
-  if (current.dir === 'desc') return { key, dir: 'asc' };
-  return null;
-}
-
-// En-tête cliquable.
-function SortHeader({ col, sort, onSort, className = '' }) {
-  const active = sort?.key === col;
-  const arrow = active ? (sort.dir === 'desc' ? '↓' : '↑') : '';
-  return (
-    <th className={`px-4 py-2 font-medium ${className}`}>
-      <button
-        onClick={() => onSort(col)}
-        className={`flex cursor-pointer items-center gap-1 transition-colors hover:text-ink ${active ? 'text-ink' : ''}`}
-      >
-        {COLUMNS[col].label}
-        <span className="w-2 tabular-nums">{arrow}</span>
-      </button>
-    </th>
-  );
-}
-
-// Table de tickets réutilisable. Lignes entièrement cliquables ; cliquer un
-// libellé de colonne trie (décroissant → croissant → reset).
+// Table de tickets réutilisable. Le titre de chaque ligne est un vrai lien : la
+// ligne entière reste cliquable à la souris, mais la navigation au clavier
+// atteint le ticket, et le clic du milieu ouvre un onglet — ce qu'un `onClick`
+// posé sur `<tr>` ne permettait ni à l'un ni à l'autre.
 //
 // Deux modes selon les props :
 //   • Contrôlé (page Tickets) : `sort` + `onSort` fournis → le tri est piloté
 //     par le parent (serveur, sur l'ensemble du jeu, pagination respectée).
 //   • Local (widgets dashboard) : sans props → tri en mémoire sur les lignes
 //     affichées.
-export default function TicketTable({ tickets, dense = false, emptyText = 'Aucun ticket', sort: sortProp, onSort: onSortProp }) {
+export default function TicketTable({
+  tickets,
+  dense = false,
+  emptyText = 'Aucun ticket',
+  emptyHint,
+  emptyAction,
+  sort: sortProp,
+  onSort: onSortProp,
+}) {
   const navigate = useNavigate();
   const controlled = typeof onSortProp === 'function';
   const [localSort, setLocalSort] = useState(null);
   const sort = controlled ? sortProp ?? null : localSort;
 
   function handleSort(key) {
-    const next = cycle(sort, key);
+    const next = cycleSort(sort, key);
     if (controlled) onSortProp(next);
     else setLocalSort(next);
   }
@@ -76,35 +57,62 @@ export default function TicketTable({ tickets, dense = false, emptyText = 'Aucun
     return [...tickets].sort((a, b) => factor * compare(value(a), value(b)));
   }, [tickets, sort, controlled]);
 
-  if (!tickets.length) return <EmptyState>{emptyText}</EmptyState>;
+  if (!tickets.length) {
+    return (
+      <EmptyState title={emptyText} action={emptyAction}>
+        {emptyHint}
+      </EmptyState>
+    );
+  }
 
-  const props = { sort, onSort: handleSort };
+  const head = (key, className) => (
+    <SortHeader
+      key={key}
+      label={COLUMNS[key].label}
+      sortKey={key}
+      sort={sort}
+      onSort={handleSort}
+      className={className}
+    />
+  );
+
+  // Le clic sur la ligne ne doit pas se déclencher quand l'utilisateur
+  // sélectionne du texte, ni doubler le lien du titre.
+  function onRowClick(e, id) {
+    if (e.target.closest('a, button')) return;
+    if (window.getSelection()?.toString()) return;
+    navigate(`/tickets/${id}`);
+  }
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
+        <caption className="sr-only">Liste des tickets</caption>
         <thead>
           <tr className="border-b border-line text-left text-xs text-ink-faint">
-            <SortHeader col="ticket" {...props} />
-            <SortHeader col="status" {...props} />
-            <SortHeader col="priority" {...props} />
-            {!dense && <SortHeader col="category" className="hidden lg:table-cell" {...props} />}
-            {!dense && <SortHeader col="assignee" className="hidden md:table-cell" {...props} />}
-            <SortHeader col="updated" className="hidden sm:table-cell" {...props} />
+            {head('ticket')}
+            {head('status')}
+            {head('priority')}
+            {!dense && head('category', 'hidden lg:table-cell')}
+            {!dense && head('assignee', 'hidden md:table-cell')}
+            {head('updated', 'hidden sm:table-cell')}
           </tr>
         </thead>
         <tbody>
           {rows.map((t) => (
             <tr
               key={t.id}
-              onClick={() => navigate(`/tickets/${t.id}`)}
+              onClick={(e) => onRowClick(e, t.id)}
               className="cursor-pointer border-b border-line last:border-0 hover:bg-canvas"
             >
               <td className="px-4 py-2.5">
-                <div className="font-medium text-ink">
+                <Link
+                  to={`/tickets/${t.id}`}
+                  className="block rounded-sm font-medium text-ink hover:text-accent"
+                >
                   <span className="mr-1.5 text-ink-faint">#{t.id}</span>
                   {t.title}
-                </div>
+                </Link>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-ink-faint">
                   <Avatar name={t.author?.name} id={t.author?.id ?? 0} size="sm" />
                   {t.author?.name}
@@ -133,7 +141,7 @@ export default function TicketTable({ tickets, dense = false, emptyText = 'Aucun
                   )}
                 </td>
               )}
-              <td className="hidden px-4 py-2.5 text-xs text-ink-faint sm:table-cell">
+              <td className="hidden px-4 py-2.5 text-xs whitespace-nowrap text-ink-faint sm:table-cell">
                 {formatDateTime(t.updatedAt)}
               </td>
             </tr>

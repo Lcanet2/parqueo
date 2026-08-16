@@ -2,7 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Button, Input, Select, Textarea, Field, Spinner, ErrorText, ErrorState } from '../components/ui.jsx';
+import {
+  Button,
+  Input,
+  Select,
+  Textarea,
+  Field,
+  Spinner,
+  ErrorText,
+  ErrorState,
+  EmptyState,
+  PageHeader,
+} from '../components/ui.jsx';
 import { formatDate } from '../lib/labels.js';
 
 // Consultation et édition d'un article — /aide/nouveau (création) et /aide/:id.
@@ -83,10 +94,10 @@ export default function KbArticle() {
 
   if (notFound) {
     return (
-      <div className="mx-auto max-w-3xl">
-        <p className="text-sm text-ink-soft">
-          Article introuvable. <Link to="/aide" className="text-accent">Retour à l'aide</Link>
-        </p>
+      <div className="mx-auto max-w-lecture">
+        <EmptyState title="Article introuvable" action={<Link to="/aide"><Button>Retour à l'aide</Button></Link>}>
+          Il a peut-être été supprimé, ou n'est pas encore publié.
+        </EmptyState>
       </div>
     );
   }
@@ -94,13 +105,14 @@ export default function KbArticle() {
   if (!isNew && !article) return <Spinner />;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="mb-1 text-xs text-ink-faint">
-        <Link to="/aide" className="hover:text-accent">Aide</Link> /{' '}
-        {isNew ? 'Nouvel article' : article.title}
-      </div>
+    <div className="mx-auto max-w-lecture space-y-4">
 
       {editing ? (
+        <>
+        <PageHeader
+          title={isNew ? 'Nouvel article' : 'Modifier l’article'}
+          trail={[{ to: '/aide', label: 'Aide' }]}
+        />
         <form onSubmit={save} className="space-y-4 rounded-lg border border-line bg-surface p-5">
           <Field label="Titre">
             <Input
@@ -134,11 +146,12 @@ export default function KbArticle() {
                 </Select>
               </Field>
             </div>
-            <label className="flex items-center gap-2 py-1.5 text-sm text-ink-soft">
+            <label className="flex cursor-pointer items-center gap-2 py-1.5 text-sm text-ink-soft [@media(pointer:coarse)]:min-h-11">
               <input
                 type="checkbox"
                 checked={form.published}
                 onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))}
+                className="h-4 w-4 cursor-pointer accent-accent"
               />
               Publié (visible de tous)
             </label>
@@ -150,32 +163,40 @@ export default function KbArticle() {
             <Button type="button" onClick={() => (isNew ? navigate('/aide') : setEditing(false))}>
               Annuler
             </Button>
-            <Button variant="primary" type="submit" disabled={busy}>
+            <Button variant="primary" type="submit" disabled={busy} aria-busy={busy}>
               {busy ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </div>
         </form>
+        </>
       ) : (
         <>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight">{article.title}</h1>
-              <p className="mt-1 text-xs text-ink-faint">
+          <PageHeader
+            title={article.title}
+            trail={[{ to: '/aide', label: 'Aide' }]}
+            description={
+              <span className="text-xs text-ink-faint">
                 {article.category ? `${article.category.name} · ` : ''}
                 {article.author?.name} · mis à jour le {formatDate(article.updatedAt)}
                 {!article.published && ' · Brouillon'}
-              </p>
-            </div>
-            {isStaff && (
-              <div className="flex shrink-0 gap-2">
-                <Button onClick={() => setEditing(true)}>Modifier</Button>
-                <Button variant="danger" onClick={remove}>Supprimer</Button>
-              </div>
-            )}
-          </div>
-          <div className="rounded-lg border border-line bg-surface px-5 py-4 text-sm whitespace-pre-wrap">
-            {article.body}
-          </div>
+              </span>
+            }
+            actions={
+              isStaff && (
+                <>
+                  <Button onClick={() => setEditing(true)}>Modifier</Button>
+                  <Button variant="danger" onClick={remove}>
+                    Supprimer
+                  </Button>
+                </>
+              )
+            }
+          />
+          {/* `max-w-[68ch]` : au-delà, l'œil perd la ligne suivante en revenant
+              à la marge. La carte, elle, garde toute la largeur. */}
+          <article className="rounded-lg border border-line bg-surface px-5 py-4 text-sm whitespace-pre-wrap">
+            <span className="block max-w-[68ch]">{article.body}</span>
+          </article>
         </>
       )}
     </div>

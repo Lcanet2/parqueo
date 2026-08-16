@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Button, Input, Select, Spinner, Card, EmptyState, ErrorState } from '../components/ui.jsx';
+import {
+  Button,
+  SearchInput,
+  Select,
+  Card,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  TableSkeleton,
+} from '../components/ui.jsx';
 import { useResource } from '../lib/useResource.js';
 import { Pagination, usePaged } from '../components/Pagination.jsx';
 import { formatDate } from '../lib/labels.js';
@@ -40,25 +49,32 @@ export default function Kb() {
 
   return (
     <div className="mx-auto max-w-liste space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold tracking-tight">Aide &amp; solutions</h1>
-        {isStaff && (
-          <Button variant="primary" onClick={() => navigate('/aide/nouveau')}>
-            Nouvel article
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Aide & solutions"
+        description="Cherchez une solution avant d'ouvrir un ticket."
+        actions={
+          isStaff && (
+            <Button variant="primary" onClick={() => navigate('/aide/nouveau')}>
+              Nouvel article
+            </Button>
+          )
+        }
+      />
 
-      <div className="flex flex-wrap gap-2">
-        <div className="min-w-40 flex-1">
-          <Input
-            placeholder="Rechercher une solution…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            autoFocus
-          />
-        </div>
-        <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-auto">
+      <div className="flex flex-wrap gap-2" role="search">
+        <SearchInput
+          className="min-w-40 flex-1"
+          placeholder="Rechercher une solution…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          autoFocus
+        />
+        <Select
+          aria-label="Catégorie"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-auto"
+        >
           <option value="">Toutes catégories</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
@@ -70,10 +86,23 @@ export default function Kb() {
         {error ? (
           <ErrorState error={error} onRetry={reload} />
         ) : articles === null ? (
-          <Spinner />
+          <TableSkeleton rows={5} columns={2} />
         ) : articles.length === 0 ? (
-          <EmptyState>
-            Aucun article{q ? ' ne correspond à cette recherche' : ' pour le moment'}
+          <EmptyState
+            title={q ? 'Aucun article ne correspond à cette recherche' : 'Aucun article'}
+            action={
+              isStaff ? (
+                <Button variant="primary" onClick={() => navigate('/aide/nouveau')}>
+                  Écrire le premier article
+                </Button>
+              ) : (
+                <Button onClick={() => navigate('/tickets/nouveau')}>Ouvrir un ticket</Button>
+              )
+            }
+          >
+            {q
+              ? 'Essayez un autre mot-clé, ou décrivez votre problème dans un ticket.'
+              : 'La base de connaissances rassemble les solutions déjà rédigées par le support.'}
           </EmptyState>
         ) : (
           <>

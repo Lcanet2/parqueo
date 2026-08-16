@@ -2,7 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Badge, Button, Spinner, Card, EmptyState, ErrorText, ErrorState } from '../components/ui.jsx';
+import {
+  Badge,
+  Button,
+  Spinner,
+  Card,
+  EmptyState,
+  ErrorText,
+  ErrorState,
+  PageHeader,
+} from '../components/ui.jsx';
+import { IconAlert } from '../components/icons.jsx';
 import AssetForm from '../components/AssetForm.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
 import {
@@ -50,9 +60,16 @@ export default function AssetDetail() {
 
   if (notFound) {
     return (
-      <p className="text-sm text-ink-soft">
-        Actif introuvable. <Link to="/inventaire" className="text-accent">Retour à l'inventaire</Link>
-      </p>
+      <EmptyState
+        title="Actif introuvable"
+        action={
+          <Link to="/inventaire">
+            <Button>Retour à l'inventaire</Button>
+          </Link>
+        }
+      >
+        Il a peut-être été supprimé, ou ne vous est pas visible.
+      </EmptyState>
     );
   }
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
@@ -71,27 +88,30 @@ export default function AssetDetail() {
 
   return (
     <div className="mx-auto max-w-page space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="mb-1 text-xs text-ink-faint">
-            <Link to="/inventaire" className="hover:text-accent">Inventaire</Link> / {asset.name}
-          </div>
-          <h1 className="text-lg font-semibold tracking-tight">{asset.name}</h1>
-          <div className="mt-1.5 flex items-center gap-2">
+      <PageHeader
+        title={asset.name}
+        trail={[{ to: '/inventaire', label: 'Inventaire' }]}
+        description={
+          <span className="flex items-center gap-2">
             <Badge {...ASSET_STATUS[asset.status]} />
             <span className="text-xs text-ink-faint">{ASSET_TYPE[asset.type]}</span>
             {asset.source !== 'manual' && <Badge {...ASSET_SOURCE[asset.source]} />}
-          </div>
-        </div>
-        {isStaff && !editing && (
-          <div className="flex gap-2">
-            <Button onClick={() => setEditing(true)}>Modifier</Button>
-            {user.role === 'admin' && (
-              <Button variant="danger" onClick={remove}>Supprimer</Button>
-            )}
-          </div>
-        )}
-      </div>
+          </span>
+        }
+        actions={
+          isStaff &&
+          !editing && (
+            <>
+              <Button onClick={() => setEditing(true)}>Modifier</Button>
+              {user.role === 'admin' && (
+                <Button variant="danger" onClick={remove}>
+                  Supprimer
+                </Button>
+              )}
+            </>
+          )
+        }
+      />
 
       <ErrorText>{error}</ErrorText>
 
@@ -147,9 +167,20 @@ export default function AssetDetail() {
               action={
                 <span className="flex items-center gap-2 text-xs text-ink-faint">
                   <Badge {...ASSET_SOURCE[asset.source]} />
-                  <span className={isStaleAsset(asset, settings?.assetStaleDays ?? 0) ? 'text-accent' : undefined}>
+                  <span
+                    className={
+                      isStaleAsset(asset, settings?.assetStaleDays ?? 0)
+                        ? 'flex items-center gap-1 text-accent'
+                        : undefined
+                    }
+                  >
                     vu {formatRelative(asset.lastSeenAt)}
-                    {isStaleAsset(asset, settings?.assetStaleDays ?? 0) && ' ⚠'}
+                    {isStaleAsset(asset, settings?.assetStaleDays ?? 0) && (
+                      <>
+                        <IconAlert size={12} />
+                        <span className="sr-only">Aucune remontée récente</span>
+                      </>
+                    )}
                   </span>
                 </span>
               }

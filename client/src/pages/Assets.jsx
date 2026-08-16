@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { Badge, Button, Spinner, Card, ErrorText, ErrorState } from '../components/ui.jsx';
+import {
+  Badge,
+  Button,
+  Card,
+  ErrorText,
+  ErrorState,
+  PageHeader,
+  TableSkeleton,
+} from '../components/ui.jsx';
 import { useResource } from '../lib/useResource.js';
 import DataTable from '../components/DataTable.jsx';
 import {
@@ -15,6 +23,7 @@ import {
   isStaleAsset,
 } from '../lib/labels.js';
 import AssetForm from '../components/AssetForm.jsx';
+import { IconAlert } from '../components/icons.jsx';
 
 export default function Assets() {
   const { user } = useAuth();
@@ -117,9 +126,17 @@ export default function Assets() {
         if (!a.lastSeenAt) return '—';
         const stale = isStaleAsset(a, staleDays);
         return (
-          <span className={stale ? 'text-accent' : undefined} title={stale ? 'Aucune remontée récente' : undefined}>
+          <span
+            className={stale ? 'flex items-center gap-1 text-accent' : undefined}
+            title={stale ? 'Aucune remontée récente' : undefined}
+          >
             {formatRelative(a.lastSeenAt)}
-            {stale && ' ⚠'}
+            {stale && (
+              <>
+                <IconAlert size={12} />
+                <span className="sr-only">Aucune remontée récente</span>
+              </>
+            )}
           </span>
         );
       },
@@ -134,30 +151,37 @@ export default function Assets() {
 
   return (
     <div className="mx-auto max-w-page space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold tracking-tight">Inventaire</h1>
-        {isStaff && (
-          <div className="flex gap-2">
-            {user.role === 'admin' && config.snmp && (
-              <Button onClick={scanSnmp} disabled={syncing !== null}>
-                {syncing === 'snmp' ? 'Scan en cours…' : 'Scanner le réseau'}
+      <PageHeader
+        title="Inventaire"
+        description={`${assets?.length ?? 0} équipement${(assets?.length ?? 0) > 1 ? 's' : ''} suivi${(assets?.length ?? 0) > 1 ? 's' : ''}`}
+        actions={
+          isStaff && (
+            <>
+              {user.role === 'admin' && config.snmp && (
+                <Button onClick={scanSnmp} disabled={syncing !== null} aria-busy={syncing === 'snmp'}>
+                  {syncing === 'snmp' ? 'Scan en cours…' : 'Scanner le réseau'}
+                </Button>
+              )}
+              {user.role === 'admin' && config.intune && (
+                <Button onClick={syncIntune} disabled={syncing !== null} aria-busy={syncing === 'intune'}>
+                  {syncing === 'intune' ? 'Synchronisation…' : 'Synchroniser Intune'}
+                </Button>
+              )}
+              <Button variant="primary" onClick={() => setCreating(true)}>
+                Ajouter un actif
               </Button>
-            )}
-            {user.role === 'admin' && config.intune && (
-              <Button onClick={syncIntune} disabled={syncing !== null}>
-                {syncing === 'intune' ? 'Synchronisation…' : 'Synchroniser Intune'}
-              </Button>
-            )}
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              Ajouter un actif
-            </Button>
-          </div>
-        )}
-      </div>
+            </>
+          )
+        }
+      />
 
+      {/* Le compte rendu de synchronisation est annoncé : l'opération dure
+          plusieurs secondes et son résultat apparaît loin du bouton cliqué. */}
       {syncMsg &&
         (syncMsg.ok ? (
-          <p className="text-sm text-status-resolved">{syncMsg.text}</p>
+          <p role="status" className="text-sm text-status-resolved">
+            {syncMsg.text}
+          </p>
         ) : (
           <ErrorText>{syncMsg.text}</ErrorText>
         ))}
@@ -175,13 +199,27 @@ export default function Assets() {
         {error ? (
           <ErrorState error={error} onRetry={reload} />
         ) : assets === null ? (
-          <Spinner />
+          <TableSkeleton rows={8} columns={5} />
         ) : (
           <DataTable
             rows={assets}
             columns={columns}
+            caption="Inventaire des équipements"
+            rowLink={(a) => `/inventaire/${a.id}`}
             onRowClick={(a) => navigate(`/inventaire/${a.id}`)}
-            emptyText="Aucun actif ne correspond à ces critères"
+            emptyText="Aucun actif"
+            emptyHint={
+              isStaff
+                ? 'Ajoutez un équipement à la main, ou branchez une source d’inventaire (agent, Intune, scan réseau).'
+                : 'Aucun équipement ne vous est attribué pour le moment.'
+            }
+            emptyAction={
+              isStaff && (
+                <Button variant="primary" onClick={() => setCreating(true)}>
+                  Ajouter un actif
+                </Button>
+              )
+            }
           />
         )}
       </Card>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Avatar, Button, Card, Field, Input, ErrorText } from '../components/ui.jsx';
+import { Avatar, Button, Card, Field, Input, ErrorText, PageHeader } from '../components/ui.jsx';
 import { ROLE } from '../lib/labels.js';
 
 // Mon compte : informations du compte connecté et changement de mot de passe.
@@ -43,8 +43,8 @@ export default function Account() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-lg font-semibold tracking-tight">Mon compte</h1>
+    <div className="mx-auto max-w-lecture space-y-4">
+      <PageHeader title="Mon compte" />
 
       <Card title="Informations">
         <div className="flex items-center gap-3 px-4 py-4">
@@ -104,7 +104,11 @@ export default function Account() {
             </p>
 
             <ErrorText>{error}</ErrorText>
-            {done && <p className="text-sm text-status-resolved">Mot de passe mis à jour.</p>}
+            {done && (
+              <p role="status" className="text-sm text-status-resolved">
+                Mot de passe mis à jour.
+              </p>
+            )}
 
             <Button variant="primary" type="submit" disabled={busy}>
               {busy ? 'Enregistrement…' : 'Changer le mot de passe'}

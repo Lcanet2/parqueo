@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useResource } from '../lib/useResource.js';
-import { Spinner, ErrorState } from '../components/ui.jsx';
+import { Spinner, ErrorState, PageHeader, EmptyState, Button } from '../components/ui.jsx';
 import { IconForm, IconPencil, IconChevronRight } from '../components/icons.jsx';
 
 // Catalogue de demandes : formulaires prédéfinis + demande libre.
@@ -13,12 +13,11 @@ export default function TicketCatalog() {
 
   return (
     <div className="mx-auto max-w-liste space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">Nouvelle demande</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Choisissez le type de demande — ou décrivez librement votre problème.
-        </p>
-      </div>
+      <PageHeader
+        title="Nouvelle demande"
+        trail={[{ to: '/tickets', label: 'Tickets' }]}
+        description="Choisissez le type de demande — ou décrivez librement votre problème."
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
@@ -62,10 +61,16 @@ export default function TicketCatalog() {
       </div>
 
       {forms.length === 0 && (
-        <p className="text-xs text-ink-faint">
-          Aucun formulaire prédéfini pour le moment — les administrateurs peuvent en créer dans
-          Administration → Formulaires.
-        </p>
+        <EmptyState
+          title="Aucun formulaire prédéfini"
+          action={
+            <Link to="/tickets/nouveau/libre">
+              <Button variant="primary">Décrire mon problème</Button>
+            </Link>
+          }
+        >
+          Les administrateurs peuvent en créer dans Administration → Formulaires.
+        </EmptyState>
       )}
     </div>
   );

@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { IconCheck } from './icons.jsx';
 
 // Select recherchable : un champ texte filtre une liste d'options. Pour les
 // listes longues (équipements, personnes) où un <select> natif devient pénible.
 //
 // options : [{ value, label }]  ·  value/onChange : valeur sélectionnée (string)
 // allowEmpty ajoute une option de remise à zéro (emptyLabel).
+//
+// Le motif ARIA « combobox + listbox » est câblé (rôles, aria-expanded,
+// aria-activedescendant) : sans lui, un lecteur d'écran annonçait un champ texte
+// ordinaire et ne disait ni que des options existaient, ni laquelle était
+// survolée par les flèches.
 export default function Combobox({
   value,
   onChange,
@@ -18,6 +24,8 @@ export default function Combobox({
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const wrapRef = useRef(null);
+  const listId = useId();
+  const optionId = (i) => `${listId}-option-${i}`;
 
   const all = useMemo(
     () => (allowEmpty ? [{ value: '', label: emptyLabel }, ...options] : options),
@@ -82,17 +90,33 @@ export default function Combobox({
         onKeyDown={onKeyDown}
         disabled={disabled}
         placeholder={selected && !selected.value ? emptyLabel : placeholder}
-        className="w-full rounded-md border border-line bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:border-ink-faint focus:outline-none disabled:opacity-50"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && filtered[active] ? optionId(active) : undefined}
+        autoComplete="off"
+        className="w-full rounded-md border border-field bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint disabled:opacity-50 [@media(pointer:coarse)]:min-h-11"
       />
       {open && (
-        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-line bg-surface py-1 shadow-lg">
+        <ul
+          id={listId}
+          role="listbox"
+          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-line bg-surface py-1 shadow-lg"
+        >
           {filtered.length === 0 ? (
             <li className="px-3 py-1.5 text-sm text-ink-faint">Aucun résultat</li>
           ) : (
             filtered.map((o, i) => (
-              <li key={o.value || '__empty'}>
+              <li
+                key={o.value || '__empty'}
+                id={optionId(i)}
+                role="option"
+                aria-selected={o.value === value}
+              >
                 <button
                   type="button"
+                  tabIndex={-1}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => choose(o)}
                   onMouseEnter={() => setActive(i)}
@@ -104,7 +128,7 @@ export default function Combobox({
                   ].join(' ')}
                 >
                   {o.label}
-                  {o.value === value && o.value ? <span className="text-xs">✓</span> : null}
+                  {o.value === value && o.value ? <IconCheck size={14} /> : null}
                 </button>
               </li>
             ))
