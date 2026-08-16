@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
 import { Avatar, IconButton } from './ui.jsx';
+import { ThemeToggle } from './ThemeToggle.jsx';
 import Brand from './Brand.jsx';
 import { ROLE } from '../lib/labels.js';
 import {
@@ -70,16 +71,19 @@ export default function Layout() {
           n'apparaît qu'une fois focalisé. */}
       <a
         href="#contenu"
-        className="sr-only rounded-md bg-ink px-3 py-2 text-sm font-medium text-white focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50"
+        className="sr-only rounded-md bg-ink px-3 py-2 text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50"
       >
         Aller au contenu
       </a>
 
       {/* Sidebar desktop */}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-surface px-3 py-4 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
-        <Link to="/" className="mb-6 px-3 text-[15px]">
-          <Brand />
-        </Link>
+        <div className="mb-6 flex items-center justify-between gap-2 px-3">
+          <Link to="/" className="min-w-0 text-[15px]">
+            <Brand />
+          </Link>
+          <ThemeToggle />
+        </div>
         {nav}
         <div className="border-t border-line pt-3">
           <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
@@ -108,6 +112,7 @@ export default function Layout() {
             <Brand />
           </Link>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link to="/compte" className="text-sm text-ink-soft">
               Mon compte
             </Link>

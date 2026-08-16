@@ -270,7 +270,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
         <div className="relative">
           <Button onClick={() => setPaletteOpen((v) => !v)}>+ Ajouter un bloc</Button>
           {paletteOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-line bg-surface p-1.5 shadow-lg">
+            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-line bg-surface p-1.5 shadow-lg dark:border-field">
               {catalogFor(meta.trigger).map(([type, spec]) => (
                 <button
                   key={type}
@@ -369,7 +369,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
         </div>
 
         {(selected === 'trigger' || selectedNode) && (
-          <div className="absolute right-2 top-2 bottom-2 w-72 overflow-y-auto rounded-lg border border-line bg-surface p-3 shadow-lg">
+          <div className="absolute right-2 top-2 bottom-2 w-72 overflow-y-auto rounded-lg border border-line bg-surface p-3 shadow-lg dark:border-field">
             {selected === 'trigger' ? (
               <TriggerPanel
                 meta={meta}
@@ -449,7 +449,10 @@ function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, ou
       <div className="flex items-center gap-2 px-3 py-2">
         <span
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
-          style={{ background: `${accent}1a`, color: accent }}
+          // `${accent}1a` produisait `var(--color-…)1a`, que le navigateur
+          // rejette : le fond teinté était transparent. color-mix() applique
+          // l'opacité sans sortir du token, donc en suivant le thème.
+          style={{ background: `color-mix(in srgb, ${accent} 12%, transparent)`, color: accent }}
         >
           <Icon size={14} />
         </span>

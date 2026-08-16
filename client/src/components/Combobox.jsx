@@ -102,7 +102,7 @@ export default function Combobox({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-line bg-surface py-1 shadow-lg"
+          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-line bg-surface py-1 shadow-lg dark:border-field"
         >
           {filtered.length === 0 ? (
             <li className="px-3 py-1.5 text-sm text-ink-faint">Aucun résultat</li>

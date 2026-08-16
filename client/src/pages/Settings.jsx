@@ -67,7 +67,7 @@ function Toggle({ checked, onChange, labelledBy, describedBy }) {
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all ${
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface shadow-sm transition-all ${
             checked ? 'left-4.5' : 'left-0.5'
           }`}
         />

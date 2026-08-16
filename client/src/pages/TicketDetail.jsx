@@ -438,7 +438,7 @@ export default function TicketDetail() {
                           onClick={() => removePending(idx)}
                           aria-label={`Retirer la pièce jointe ${file.name}`}
                           title="Retirer"
-                          className="absolute -top-1.5 -right-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-ink text-white"
+                          className="absolute -top-1.5 -right-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-ink text-surface"
                         >
                           <IconX size={11} />
                         </button>

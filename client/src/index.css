@@ -1,6 +1,12 @@
 @import '@fontsource-variable/inter';
 @import 'tailwindcss';
 
+/* La variante `dark:` suit l'attribut posé sur <html>, pas `prefers-color-scheme`.
+   C'est ce qui permet de forcer le thème clair sur une machine réglée en sombre :
+   le script d'amorçage d'index.html résout « système » en clair/sombre avant le
+   premier rendu, donc l'attribut est toujours présent. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
   --font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
 
@@ -33,6 +39,10 @@
   --color-accent: #c6364f;
   --color-accent-strong: #a92742;
   --color-accent-soft: #fdf0f2;
+  /* Texte posé sur un aplat d'accent. En clair c'est du blanc ; en sombre
+     l'accent s'éclaircit, et c'est l'encre sombre qui repasse dessus. Un
+     `text-white` en dur ne survit pas à l'inversion. */
+  --color-on-accent: #ffffff;
 
   /* États tickets */
   --color-status-new: #3467d6;
@@ -50,6 +60,50 @@
      navigation actif ; un anneau de la même couleur rendrait les deux signaux
      indiscernables. Le noir contraste sur tous les fonds de l'application. */
   --color-focus: #1c1c21;
+}
+
+/* --- Jeu sombre ------------------------------------------------------------
+   Mêmes rôles, mêmes noms : aucun composant ne connaît le thème, il ne lit que
+   les tokens. Les valeurs sont vérifiées au contraste sur les DEUX fonds
+   (`surface` et `canvas`), comme en clair.
+
+   `color-scheme: dark` n'est pas décoratif : sans lui, les menus déroulants des
+   trente `<select>` de l'application, les ascenseurs et le sélecteur de date
+   restent blancs — le navigateur les dessine lui-même. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-canvas: #17171a;
+  --color-surface: #202024; /* la carte est plus claire que la page : en sombre
+                               c'est l'élévation qui s'inverse, pas l'ombre */
+  --color-line: #33333b;
+  --color-field: #6d6d7a; /* 3.2:1 sur surface, 3.5:1 sur canvas */
+  --color-ink: #ececed; /* 13.8:1 */
+  --color-ink-soft: #a3a3ad; /* 6.5:1 */
+  --color-ink-faint: #8b8b96; /* 4.8:1 sur surface, 5.3:1 sur canvas */
+
+  --color-accent: #f0708a; /* 5.7:1 en texte ; le #c6364f du thème clair tombe
+                              à 1.6:1 sur fond sombre */
+  --color-accent-strong: #f795a8;
+  --color-accent-soft: #3a2028;
+  --color-on-accent: #17171a;
+
+  /* Statuts : le schéma s'inverse — texte clair sur pastille sombre désaturée,
+     au lieu de texte saturé sur pastille très pâle. */
+  --color-status-new: #84a9f0;
+  --color-status-new-bg: #1c2740;
+  --color-status-progress: #e2a253;
+  --color-status-progress-bg: #37280f;
+  --color-status-waiting: #b494ee;
+  --color-status-waiting-bg: #2a2040;
+  --color-status-resolved: #5cc389;
+  --color-status-resolved-bg: #122e1e;
+  --color-status-closed: #a6a6b2;
+  --color-status-closed-bg: #2c2c34;
+
+  /* L'anneau de focus s'inverse aussi : l'encre noire du thème clair serait
+     invisible sur la page sombre. */
+  --color-focus: #ececed;
 }
 
 html {
