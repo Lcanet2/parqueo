@@ -56,7 +56,7 @@ export function Badge({ label, fg, bg }) {
 export function Button({ variant = 'default', className = '', ...props }) {
   const base = `inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${TOUCH}`;
   const variants = {
-    primary: 'bg-accent text-white hover:bg-accent-strong',
+    primary: 'bg-accent text-on-accent hover:bg-accent-strong',
     default: 'border border-line bg-surface text-ink hover:bg-canvas hover:border-field',
     ghost: 'text-ink-soft hover:bg-canvas hover:text-ink',
     danger: 'border border-line bg-surface text-accent hover:bg-accent-soft hover:border-accent',

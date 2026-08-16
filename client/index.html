@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Parqueo</title>
+    <!--
+      Le thème est posé avant le premier rendu, et non depuis React : monté
+      après la peinture, il laisserait apparaître un éclair de page blanche
+      avant de basculer en sombre. Le script est volontairement minuscule et
+      synchrone ; il duplique la logique de src/lib/theme.js parce qu'il doit
+      s'exécuter avant que le moindre module ne soit chargé.
+    -->
+    <script>
+      (function () {
+        try {
+          var p = localStorage.getItem('parqueo:theme');
+          var dark =
+            p === 'dark' ||
+            ((p === null || p === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

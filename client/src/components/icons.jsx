@@ -311,3 +311,27 @@ export const IconFilter = (p) => (
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
   </Icon>
 );
+
+// --- Thème ---
+
+export const IconSun = (p) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </Icon>
+);
+
+export const IconMoon = (p) => (
+  <Icon {...p}>
+    <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+  </Icon>
+);
+
+// « Système » : l'appareil, dont on suit le réglage. Un portable et non un
+// écran — IconInventory occupe déjà le tracé de l'écran de bureau.
+export const IconDevice = (p) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="12" rx="2" />
+    <line x1="2" y1="20" x2="22" y2="20" />
+  </Icon>
+);

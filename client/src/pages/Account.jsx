@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Avatar, Button, Card, Field, Input, ErrorText, PageHeader } from '../components/ui.jsx';
 import { ROLE } from '../lib/labels.js';
+import { ThemeChoice } from '../components/ThemeToggle.jsx';
 
 // Mon compte : informations du compte connecté et changement de mot de passe.
 // Les comptes Microsoft n'ont pas de mot de passe local : le formulaire est
@@ -58,6 +59,16 @@ export default function Account() {
         <p className="border-t border-line px-4 py-2.5 text-xs text-ink-faint">
           Le nom, l'adresse email et le rôle sont gérés par l'administration.
         </p>
+      </Card>
+
+      <Card title="Apparence">
+        <div className="space-y-2 px-4 py-4">
+          <ThemeChoice />
+          <p className="text-xs text-ink-faint">
+            « Système » suit le réglage de votre appareil. Le choix est propre à ce
+            navigateur : il ne suit pas votre compte sur un autre poste.
+          </p>
+        </div>
       </Card>
 
       <Card title="Mot de passe">
