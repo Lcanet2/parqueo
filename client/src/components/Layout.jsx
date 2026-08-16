@@ -78,8 +78,11 @@ export default function Layout() {
 
       {/* Sidebar desktop */}
       <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-surface px-3 py-4 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
+        {/* La marque était à 15 px, soit moins que les libellés de navigation
+            juste en dessous : elle passait pour une ligne de menu parmi les
+            autres. 22 px la remettent au rang d'en-tête. */}
         <div className="mb-6 flex items-center justify-between gap-2 px-3">
-          <Link to="/" className="min-w-0 text-[15px]">
+          <Link to="/" className="min-w-0 text-[22px] leading-none">
             <Brand />
           </Link>
           <ThemeToggle />
@@ -92,7 +95,7 @@ export default function Layout() {
               title="Mon compte"
               className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md transition-colors hover:text-accent"
             >
-              <Avatar name={user.name} id={user.id} />
+              <Avatar name={user.name} id={user.id} avatar={user.avatar} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{user.name}</span>
                 <span className="block text-xs text-ink-faint">{ROLE[user.role]}</span>
@@ -108,7 +111,7 @@ export default function Layout() {
       {/* Header mobile */}
       <header className="sticky top-0 z-10 border-b border-line bg-surface md:hidden">
         <div className="flex items-center justify-between px-4 py-2.5">
-          <Link to="/" className="text-[15px]">
+          <Link to="/" className="text-[19px] leading-none">
             <Brand />
           </Link>
           <div className="flex items-center gap-3">

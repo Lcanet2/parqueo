@@ -114,7 +114,7 @@ export default function TicketTable({
                   {t.title}
                 </Link>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-ink-faint">
-                  <Avatar name={t.author?.name} id={t.author?.id ?? 0} size="sm" />
+                  <Avatar name={t.author?.name} id={t.author?.id ?? 0} avatar={t.author?.avatar} size="sm" />
                   {t.author?.name}
                 </div>
               </td>
@@ -133,7 +133,7 @@ export default function TicketTable({
                 <td className="hidden px-4 py-2.5 md:table-cell">
                   {t.assignee ? (
                     <span className="flex items-center gap-1.5 text-ink-soft">
-                      <Avatar name={t.assignee.name} id={t.assignee.id} size="sm" />
+                      <Avatar name={t.assignee.name} id={t.assignee.id} avatar={t.assignee.avatar} size="sm" />
                       {t.assignee.name}
                     </span>
                   ) : (

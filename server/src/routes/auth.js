@@ -1,3 +1,8 @@
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
+import multer from 'multer';
 import { Router } from '../lib/router.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -15,8 +20,43 @@ import {
 import { intuneEnabled } from '../services/intune.js';
 import { snmpEnabled } from '../services/snmp.js';
 import { text } from '../lib/input.js';
+import { DOSSIER_AVATARS } from './avatars.js';
 
 const router = Router();
+
+// --- Photo de profil ---------------------------------------------------------
+
+const EXTENSIONS_IMAGE = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp', 'image/gif': '.gif' };
+
+// 2 Mo : une photo de profil s'affiche à 32 px de côté. La borne est large pour
+// accepter un cliché de téléphone sans retouche, mais l'image est servie telle
+// quelle — aucune bibliothèque de redimensionnement n'est embarquée, et en
+// ajouter une (binaire natif) pour ce seul usage coûterait plus qu'elle
+// n'apporte.
+const TAILLE_MAX_AVATAR = 2 * 1024 * 1024;
+
+mkdirSync(DOSSIER_AVATARS, { recursive: true });
+
+const envoiAvatar = multer({
+  storage: multer.diskStorage({
+    destination: DOSSIER_AVATARS,
+    // 32 caractères hexadécimaux : c'est ce nom qui protège l'accès, il ne doit
+    // rien laisser deviner du compte auquel la photo appartient.
+    filename: (req, file, cb) =>
+      cb(null, crypto.randomBytes(16).toString('hex') + EXTENSIONS_IMAGE[file.mimetype]),
+  }),
+  limits: { fileSize: TAILLE_MAX_AVATAR },
+  // Le type déclaré fait foi pour l'extension écrite sur le disque : on
+  // n'accepte donc que ceux qu'on sait nommer.
+  fileFilter: (req, file, cb) => cb(null, Boolean(EXTENSIONS_IMAGE[file.mimetype])),
+});
+
+// Retire l'ancien fichier après remplacement ou suppression : sans ça, le volume
+// accumule une image par changement de photo, pour toujours.
+async function oublierAncienne(nom) {
+  if (!nom) return;
+  await unlink(path.resolve(DOSSIER_AVATARS, nom)).catch(() => {});
+}
 
 function toPublicUser(user) {
   const { passwordHash, ...publicUser } = user;
@@ -174,6 +214,41 @@ router.patch('/password', authRequired, async (req, res) => {
     data: { passwordHash: await bcrypt.hash(newPassword, 10) },
   });
   res.json({ ok: true });
+});
+
+// Chacun gère sa propre photo : passer par un administrateur pour changer son
+// portrait n'aurait aucun sens.
+router.post('/avatar', authRequired, envoiAvatar.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Image attendue : PNG, JPEG, WebP ou GIF, 2 Mo maximum' });
+  }
+
+  const utilisateur = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  if (!utilisateur) {
+    await oublierAncienne(req.file.filename);
+    return res.status(404).json({ error: 'Utilisateur introuvable' });
+  }
+
+  const misAJour = await prisma.user.update({
+    where: { id: utilisateur.id },
+    data: { avatar: req.file.filename },
+  });
+  await oublierAncienne(utilisateur.avatar);
+
+  res.json(toPublicUser(misAJour));
+});
+
+router.delete('/avatar', authRequired, async (req, res) => {
+  const utilisateur = await prisma.user.findUnique({ where: { id: req.user.sub } });
+  if (!utilisateur) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+  const misAJour = await prisma.user.update({
+    where: { id: utilisateur.id },
+    data: { avatar: null },
+  });
+  await oublierAncienne(utilisateur.avatar);
+
+  res.json(toPublicUser(misAJour));
 });
 
 export default router;

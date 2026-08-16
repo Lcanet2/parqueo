@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Avatar, Button, Card, Field, Input, ErrorText, PageHeader } from '../components/ui.jsx';
+import { IconTrash } from '../components/icons.jsx';
 import { ROLE } from '../lib/labels.js';
 import { ThemeChoice } from '../components/ThemeToggle.jsx';
 
@@ -9,7 +10,7 @@ import { ThemeChoice } from '../components/ThemeToggle.jsx';
 // Les comptes Microsoft n'ont pas de mot de passe local : le formulaire est
 // remplacé par un renvoi vers Microsoft.
 export default function Account() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -49,7 +50,7 @@ export default function Account() {
 
       <Card title="Informations">
         <div className="flex items-center gap-3 px-4 py-4">
-          <Avatar name={user.name} id={user.id} />
+          <Avatar name={user.name} id={user.id} avatar={user.avatar} />
           <div className="min-w-0">
             <div className="text-sm font-medium">{user.name}</div>
             <div className="text-sm text-ink-soft">{user.email}</div>
@@ -60,6 +61,8 @@ export default function Account() {
           Le nom, l'adresse email et le rôle sont gérés par l'administration.
         </p>
       </Card>
+
+      <PhotoDeProfil user={user} onChange={updateUser} />
 
       <Card title="Apparence">
         <div className="space-y-2 px-4 py-4">
@@ -129,5 +132,85 @@ export default function Account() {
         )}
       </Card>
     </div>
+  );
+}
+
+// Photo de profil. Elle remplace les initiales partout où le compte apparaît :
+// listes de tickets, conversation, participants, barre latérale.
+function PhotoDeProfil({ user, onChange }) {
+  const champ = useRef(null);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function envoyer(fichier) {
+    if (!fichier) return;
+    setError(null);
+
+    // Contrôlé aussi côté serveur ; ici c'est pour éviter d'envoyer 8 Mo sur une
+    // connexion lente avant d'apprendre que c'est refusé.
+    if (fichier.size > 2 * 1024 * 1024) {
+      setError('Image trop lourde : 2 Mo maximum.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const donnees = new FormData();
+      donnees.append('file', fichier);
+      onChange(await api.upload('/auth/avatar', donnees));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retirer() {
+    setError(null);
+    setBusy(true);
+    try {
+      onChange(await api.delete('/auth/avatar'));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title="Photo de profil">
+      <div className="flex flex-wrap items-center gap-4 px-4 py-4">
+        <Avatar name={user.name} id={user.id} avatar={user.avatar} size="lg" />
+
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={champ}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                envoyer(e.target.files[0]);
+                e.target.value = ''; // permet de renvoyer deux fois le même fichier
+              }}
+            />
+            <Button onClick={() => champ.current?.click()} disabled={busy} aria-busy={busy}>
+              {user.avatar ? 'Changer la photo' : 'Choisir une photo'}
+            </Button>
+            {user.avatar && (
+              <Button variant="danger" onClick={retirer} disabled={busy}>
+                <IconTrash size={14} />
+                Retirer
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-ink-faint">
+            PNG, JPEG, WebP ou GIF, 2 Mo maximum. Sans photo, vos initiales sont
+            affichées.
+          </p>
+          <ErrorText>{error}</ErrorText>
+        </div>
+      </div>
+    </Card>
   );
 }
