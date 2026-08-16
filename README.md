@@ -134,6 +134,7 @@ client/
   src/components/  briques d'interface partagées
 docker/            Caddyfile de l'image web
 install.sh         installeur : télécharge, génère les secrets, démarre
+                   (source ; une copie est servie sur parqueo.fr/install.sh)
 docker-compose.prod.yml  stack de production (images publiées)
 docker-compose.yml       stack construite depuis les sources, pour développer
 ```
@@ -160,6 +161,7 @@ Concrètement :
 **Licence commerciale.** Si l'AGPL est incompatible avec votre modèle
 (intégration dans un produit propriétaire, revente en marque blanche, SaaS sans
 publication des modifications), une licence commerciale est disponible :
+[parqueo.fr/services](https://parqueo.fr/services/) ·
 [contact@parqueo.fr](mailto:contact@parqueo.fr).
 
 « Parqueo » est le nom du projet ; la licence porte sur le code, pas sur le nom
