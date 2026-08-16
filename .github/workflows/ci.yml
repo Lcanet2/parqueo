@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    # Une version poussée déclenche la publication des images (job « publier »).
+    tags: ['v*']
   pull_request:
 
 jobs:
@@ -28,7 +30,9 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://parqueo:parqueo@localhost:5432/parqueo_test?schema=public
-      JWT_SECRET: secret-de-ci
+      # Factice, mais de longueur réaliste : l'API refuse de démarrer
+      # avec un secret de moins de 16 caractères.
+      JWT_SECRET: secret-de-ci-uniquement-pour-les-tests
 
     defaults:
       run:
@@ -89,7 +93,9 @@ jobs:
     # besoin — y compris `logs` et `down`, qui ne les avaient pas et faisaient
     # échouer le job après une stack pourtant démarrée et vérifiée.
     env:
-      JWT_SECRET: secret-de-ci
+      # Factice, mais de longueur réaliste : l'API refuse de démarrer
+      # avec un secret de moins de 16 caractères.
+      JWT_SECRET: secret-de-ci-uniquement-pour-les-tests
       POSTGRES_PASSWORD: parqueo
 
     steps:
@@ -128,3 +134,60 @@ jobs:
       - name: Arrêt
         if: always()
         run: docker compose down -v
+
+  publier:
+    name: Publier les images
+    runs-on: ubuntu-latest
+    # Uniquement sur une version taguée, et seulement si tout est vert : une
+    # image publiée est tirée par des installations réelles, elle ne doit jamais
+    # sortir d'un commit dont les tests échouent.
+    needs: [serveur, client, docker]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          - nom: api
+            dockerfile: server/Dockerfile
+          - nom: web
+            dockerfile: client/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Produit les étiquettes à partir du tag git : 1.4.2, 1.4 et latest.
+      # « latest » est ce que tire une installation neuve ; « 1.4 » permet de
+      # suivre les correctifs sans changer de version majeure.
+      - name: Étiquettes
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/parqueo-${{ matrix.nom }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

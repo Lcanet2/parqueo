@@ -1,6 +1,6 @@
-# Client Parqueo : build Vite, puis nginx qui sert les fichiers statiques et
-# proxifie /api vers l'API — le client appelle /api en relatif, front et API
-# doivent donc partager la même origine.
+# Client Parqueo : build Vite, puis Caddy qui sert les fichiers statiques,
+# proxifie /api vers l'API et gère TLS — le client appelle /api en relatif,
+# front et API doivent donc partager la même origine.
 FROM node:22-slim AS build
 
 WORKDIR /app
@@ -10,7 +10,10 @@ RUN npm ci
 COPY client/ ./
 RUN npm run build
 
-FROM nginx:1.27-alpine
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
+# Caddy plutôt que nginx : à domaine renseigné, il obtient et renouvelle le
+# certificat Let's Encrypt sans configuration ni tâche planifiée. C'est ce qui
+# évite à la personne qui installe d'écrire un bloc TLS et un cron certbot.
+FROM caddy:2-alpine
+COPY docker/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/dist /srv
+EXPOSE 80 443

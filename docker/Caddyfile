@@ -1,0 +1,60 @@
+# Serveur du conteneur « web » : sert le client compilé, proxifie /api vers
+# l'API, et gère TLS tout seul.
+#
+# L'adresse du site vient de l'environnement :
+#   SITE_ADDRESS=:80                      → HTTP simple (évaluation locale)
+#   SITE_ADDRESS=support.entreprise.fr    → HTTPS, certificat Let's Encrypt
+#                                           obtenu et renouvelé automatiquement
+#
+# C'est tout ce qui sépare un essai d'une mise en production : Caddy demande le
+# certificat au premier démarrage dès que l'adresse est un nom de domaine, et
+# redirige HTTP vers HTTPS de lui-même.
+{
+	# Pas de directive `email` : elle exige un argument, et un Caddyfile n'a pas
+	# de conditionnelle — laissée vide, elle empêchait Caddy de démarrer. Let's
+	# Encrypt ne la réclame pas, et c'est un réglage de moins à expliquer.
+	#
+	# Le journal d'accès complet n'apporte rien ici et remplit le disque ;
+	# les erreurs, si.
+	log {
+		level ERROR
+	}
+}
+
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# 10 Mo de pièce jointe côté application, 5 Mo pour les rapports
+	# d'inventaire : la marge couvre l'encodage multipart.
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		# Le navigateur ne devine pas le type d'un fichier servi.
+		X-Content-Type-Options nosniff
+		# L'application n'a aucune raison d'être encadrée par un tiers.
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		# Ne pas annoncer la version du serveur.
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		root * /srv
+
+		# Les fichiers produits par Vite portent un hachage dans leur nom : leur
+		# contenu ne change jamais pour une URL donnée.
+		header /assets/* Cache-Control "public, max-age=31536000, immutable"
+		# index.html, lui, doit être rechargé après chaque mise à jour, sinon le
+		# navigateur continue de demander les anciens fichiers hachés.
+		header /index.html Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
+import setupRoutes from './routes/setup.js';
 import ticketRoutes from './routes/tickets.js';
 import assetRoutes from './routes/assets.js';
 import inventoryRoutes from './routes/inventory.js';
@@ -50,6 +51,8 @@ export function createApp() {
   // Déclarée avant les routeurs montés sur /api, sinon leur authRequired l'intercepte.
   app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+  // Publique et auto-refermante : ne répond que tant qu'aucun compte n'existe.
+  app.use('/api/setup', setupRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/tickets', ticketRoutes);
   app.use('/api/assets', assetRoutes);

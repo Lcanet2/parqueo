@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { verifierEnvOuQuitter } from './lib/env.js';
 import { createApp } from './app.js';
 import { startAutoClose } from './services/autoclose.js';
 import { startMailbox } from './services/mailbox.js';
@@ -13,6 +14,10 @@ process.on('unhandledRejection', (err) => {
 process.on('uncaughtException', (err) => {
   console.error('[exception non capturée]', err);
 });
+
+// Avant toute chose : mieux vaut refuser de démarrer avec un message clair que
+// servir une API qui échouera à la première connexion.
+verifierEnvOuQuitter();
 
 const app = createApp();
 

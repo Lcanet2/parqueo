@@ -4,6 +4,7 @@ import { SettingsProvider } from './context/SettingsContext.jsx';
 import Settings from './pages/Settings.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
+import Setup from './pages/Setup.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Tickets from './pages/Tickets.jsx';
 import TicketDetail from './pages/TicketDetail.jsx';
@@ -21,10 +22,31 @@ import { Spinner } from './components/ui.jsx';
 import GlobalErrors from './components/GlobalErrors.jsx';
 
 function Protected({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, needsSetup } = useAuth();
   if (loading) return <Spinner />;
+  // Une instance sans aucun compte n'a rien à protéger : on envoie sur
+  // l'installation plutôt que sur un écran de connexion impossible à passer.
+  if (needsSetup) return <Navigate to="/installation" replace />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
+}
+
+// L'installation ne s'ouvre que tant qu'aucun compte n'existe. Le serveur
+// applique la même règle (409) : cette redirection est du confort, pas la
+// serrure.
+function SetupOnly() {
+  const { loading, needsSetup, user } = useAuth();
+  if (loading) return <Spinner />;
+  if (!needsSetup) return <Navigate to={user ? '/' : '/login'} replace />;
+  return <Setup />;
+}
+
+// Écran de connexion : inutile tant que personne n'a installé l'application.
+function LoginOrSetup() {
+  const { loading, needsSetup } = useAuth();
+  if (loading) return <Spinner />;
+  if (needsSetup) return <Navigate to="/installation" replace />;
+  return <Login />;
 }
 
 function AdminOnly({ children }) {
@@ -47,7 +69,8 @@ export default function App() {
       <BrowserRouter>
         <GlobalErrors />
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/installation" element={<SetupOnly />} />
+          <Route path="/login" element={<LoginOrSetup />} />
           <Route
             element={
               <Protected>
