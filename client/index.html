@@ -16,10 +16,13 @@
       (function () {
         try {
           var p = localStorage.getItem('parqueo:theme');
+          // Seuls 'light' et 'dark' sont des choix ; toute autre valeur — dont
+          // le 'system' écrit par les versions qui proposaient ce troisième
+          // bouton — signifie « rien de choisi », donc on suit l'appareil.
+          var choisi = p === 'light' || p === 'dark';
           var dark =
             p === 'dark' ||
-            ((p === null || p === 'system') &&
-              window.matchMedia('(prefers-color-scheme: dark)').matches);
+            (!choisi && window.matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.dataset.theme = dark ? 'dark' : 'light';
         } catch (e) {
           document.documentElement.dataset.theme = 'light';

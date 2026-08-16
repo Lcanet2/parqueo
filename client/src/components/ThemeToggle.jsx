@@ -1,20 +1,31 @@
 import { useEffect, useState } from 'react';
-import { getPreference, setPreference, watchSystemTheme } from '../lib/theme.js';
-import { IconSun, IconMoon, IconDevice } from './icons.jsx';
+import { setPreference, watchSystemTheme } from '../lib/theme.js';
+import { resolveTheme } from '../lib/theme.js';
+import { IconSun, IconMoon } from './icons.jsx';
 
 const OPTIONS = [
-  { value: 'system', label: 'Système', Icon: IconDevice },
   { value: 'light', label: 'Clair', Icon: IconSun },
   { value: 'dark', label: 'Sombre', Icon: IconMoon },
 ];
 
 // État partagé par les deux commandes (barre latérale et page « Mon compte ») :
 // changer le thème dans l'une doit rafraîchir l'autre.
-function usePreference() {
-  const [preference, set] = useState(getPreference);
-  useEffect(watchSystemTheme, []);
+function useTheme() {
+  const [theme, set] = useState(resolveTheme);
+  useEffect(() => {
+    // Sans choix enregistré, l'OS peut basculer sous nos yeux : on garde
+    // l'affichage en phase avec ce que voit réellement l'utilisateur.
+    const stop = watchSystemTheme();
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const suivre = () => set(resolveTheme());
+    mq.addEventListener('change', suivre);
+    return () => {
+      stop();
+      mq.removeEventListener('change', suivre);
+    };
+  }, []);
   return [
-    preference,
+    theme,
     (next) => {
       setPreference(next);
       set(next);
@@ -22,15 +33,14 @@ function usePreference() {
   ];
 }
 
-// Commande compacte de la barre latérale : un bouton qui fait défiler les trois
-// choix. Le libellé accessible dit l'état courant ET ce que le clic va faire —
-// « Thème : système. Passer en clair » — parce qu'une icône seule ne dit ni
-// l'un ni l'autre.
+// Commande compacte de la barre latérale : une simple bascule entre les deux
+// thèmes. Le libellé accessible dit l'état courant ET ce que le clic va faire —
+// « Thème : sombre. Passer en clair » — parce qu'une icône seule ne dit ni l'un
+// ni l'autre.
 export function ThemeToggle() {
-  const [preference, choose] = usePreference();
-  const index = OPTIONS.findIndex((o) => o.value === preference);
-  const current = OPTIONS[index] ?? OPTIONS[0];
-  const next = OPTIONS[(index + 1) % OPTIONS.length];
+  const [theme, choose] = useTheme();
+  const current = OPTIONS.find((o) => o.value === theme) ?? OPTIONS[0];
+  const next = OPTIONS.find((o) => o.value !== current.value);
 
   return (
     <button
@@ -45,16 +55,16 @@ export function ThemeToggle() {
   );
 }
 
-// Commande explicite de la page « Mon compte » : les trois choix visibles d'un
-// coup, en groupe de boutons radio — le bouton qui fait défiler ne se découvre
-// pas, et « Système » a besoin d'être nommé pour être compris.
+// Commande explicite de la page « Mon compte » : les deux choix visibles d'un
+// coup, en groupe de boutons radio — la bascule de la barre latérale ne se
+// découvre pas d'elle-même.
 export function ThemeChoice() {
-  const [preference, choose] = usePreference();
+  const [theme, choose] = useTheme();
 
   return (
     <div role="radiogroup" aria-label="Thème de l'interface" className="flex flex-wrap gap-2">
       {OPTIONS.map((o) => {
-        const active = preference === o.value;
+        const active = theme === o.value;
         return (
           <button
             key={o.value}

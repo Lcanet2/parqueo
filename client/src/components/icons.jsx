@@ -327,15 +327,6 @@ export const IconMoon = (p) => (
   </Icon>
 );
 
-// « Système » : l'appareil, dont on suit le réglage. Un portable et non un
-// écran — IconInventory occupe déjà le tracé de l'écran de bureau.
-export const IconDevice = (p) => (
-  <Icon {...p}>
-    <rect x="3" y="4" width="18" height="12" rx="2" />
-    <line x1="2" y1="20" x2="22" y2="20" />
-  </Icon>
-);
-
 export const IconTrash = (p) => (
   <Icon {...p}>
     <polyline points="3 6 5 6 21 6" />
