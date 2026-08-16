@@ -93,8 +93,8 @@ router.post('/:id/submit', async (req, res) => {
     },
     include: {
       category: true,
-      author: { select: { id: true, name: true, email: true } },
-      assignee: { select: { id: true, name: true, email: true } },
+      author: { select: { id: true, name: true, email: true, avatar: true } },
+      assignee: { select: { id: true, name: true, email: true, avatar: true } },
       team: true,
       asset: { select: { id: true, name: true, type: true } },
     },

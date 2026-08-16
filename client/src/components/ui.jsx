@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useId } from 'react';
+import { cloneElement, isValidElement, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IconInbox, IconSearch, IconAlert, IconChevronRight } from './icons.jsx';
 
@@ -21,7 +21,12 @@ const AVATAR_COLORS = [
   { bg: 'var(--color-status-closed-bg)', fg: 'var(--color-status-closed)' },
 ];
 
-export function Avatar({ name = '?', id = 0, size = 'md' }) {
+// `avatar` est le nom de fichier renvoyé par l'API ; sans lui, on retombe sur
+// les initiales. L'image est chargée par une balise <img> ordinaire : son
+// adresse contient un secret de 32 caractères qui tient lieu d'autorisation,
+// ce qui évite un appel authentifié par pastille (une liste de tickets en
+// affiche jusqu'à cent). Voir server/src/routes/avatars.js.
+export function Avatar({ name = '?', id = 0, avatar = null, size = 'md' }) {
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -30,13 +35,29 @@ export function Avatar({ name = '?', id = 0, size = 'md' }) {
     .join('')
     .toUpperCase();
   const color = AVATAR_COLORS[id % AVATAR_COLORS.length];
-  const sizes = { sm: 'h-6 w-6 text-[10px]', md: 'h-8 w-8 text-xs' };
+  const sizes = { sm: 'h-6 w-6 text-[10px]', md: 'h-8 w-8 text-xs', lg: 'h-16 w-16 text-lg' };
+  const base = `inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${sizes[size]}`;
+
+  // Si le fichier a disparu — volume non restauré, sauvegarde partielle — le
+  // navigateur afficherait son icône d'image cassée dans chaque ligne de la
+  // liste. On revient alors aux initiales, qui ne dépendent que du nom.
+  const [absente, setAbsente] = useState(false);
+
+  if (avatar && !absente) {
+    return (
+      <img
+        src={`/api/avatars/${avatar}`}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        onError={() => setAbsente(true)}
+        className={`${base} bg-canvas object-cover`}
+      />
+    );
+  }
+
   return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold ${sizes[size]}`}
-      style={{ background: color.bg, color: color.fg }}
-      aria-hidden="true"
-    >
+    <span className={base} style={{ background: color.bg, color: color.fg }} aria-hidden="true">
       {initials}
     </span>
   );

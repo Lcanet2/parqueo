@@ -66,6 +66,13 @@ export function AuthProvider({ children }) {
     setSessionMessage(null);
   }
 
+  // Le compte a changé côté serveur (photo de profil) : on rafraîchit la copie
+  // portée par le contexte, sinon la barre latérale garde l'ancienne pastille
+  // jusqu'au prochain rechargement complet.
+  function updateUser(modifie) {
+    setUser(modifie);
+  }
+
   // Fin de l'installation : le serveur a renvoyé un jeton, on entre directement
   // dans l'application sans repasser par l'écran de connexion.
   function completeSetup({ token, user: created }) {
@@ -82,7 +89,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, sessionMessage, needsSetup, completeSetup }}
+      value={{ user, loading, login, logout, sessionMessage, needsSetup, completeSetup, updateUser }}
     >
       {children}
     </AuthContext.Provider>
