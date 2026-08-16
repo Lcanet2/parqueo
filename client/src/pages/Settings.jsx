@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useSettings } from '../context/SettingsContext.jsx';
 import { Card, Select, Spinner, ErrorText, PageHeader } from '../components/ui.jsx';
@@ -243,6 +243,61 @@ export default function Settings() {
           </Row>
         </div>
       </Card>
+
+      <APropos />
     </div>
+  );
+}
+
+// Référence de l'instance, en fin de page : la version est la première chose
+// qu'on demande en support, et la licence la première qu'on cherche avant de
+// déployer un logiciel auto-hébergé en entreprise.
+function APropos() {
+  const [infos, setInfos] = useState(null);
+
+  useEffect(() => {
+    api.get('/about').then(setInfos).catch(() => {});
+  }, []);
+
+  return (
+    <Card title="À propos">
+      <div className="space-y-3 px-4 py-4 text-sm">
+        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+          <div>
+            <dt className="text-xs text-ink-faint">Version</dt>
+            <dd className="tabular-nums">{infos ? infos.version : '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-ink-faint">Licence</dt>
+            <dd>
+              <a
+                href="https://www.gnu.org/licenses/agpl-3.0.html"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent underline-offset-2 hover:underline"
+              >
+                {infos ? infos.license : 'AGPL-3.0'}
+              </a>
+            </dd>
+          </div>
+        </dl>
+
+        <p className="border-t border-line pt-3 text-xs text-ink-soft">
+          Parqueo est libre : vous l'installez et l'exploitez chez vous sans rien devoir.
+          Si vous préférez déléguer l'hébergement, la migration depuis GLPI ou le
+          support — ou si vous le proposez à des tiers et cherchez une licence
+          adaptée —{' '}
+          <a
+            href="https://parqueo.fr/services"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent underline-offset-2 hover:underline"
+          >
+            parqueo.fr/services
+          </a>
+          .
+        </p>
+      </div>
+    </Card>
   );
 }
