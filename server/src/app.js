@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import setupRoutes from './routes/setup.js';
+import aboutRoutes from './routes/about.js';
 import ticketRoutes from './routes/tickets.js';
 import assetRoutes from './routes/assets.js';
 import inventoryRoutes from './routes/inventory.js';
@@ -53,6 +54,7 @@ export function createApp() {
 
   // Publique et auto-refermante : ne répond que tant qu'aucun compte n'existe.
   app.use('/api/setup', setupRoutes);
+  app.use('/api/about', aboutRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/tickets', ticketRoutes);
   app.use('/api/assets', assetRoutes);
