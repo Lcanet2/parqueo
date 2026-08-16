@@ -84,26 +84,25 @@ jobs:
     name: Images Docker
     runs-on: ubuntu-latest
 
+    # Au niveau du job, et non par étape : docker-compose.yml exige ces deux
+    # variables pour être interpolé, donc TOUTE commande `docker compose` en a
+    # besoin — y compris `logs` et `down`, qui ne les avaient pas et faisaient
+    # échouer le job après une stack pourtant démarrée et vérifiée.
+    env:
+      JWT_SECRET: secret-de-ci
+      POSTGRES_PASSWORD: parqueo
+
     steps:
       - uses: actions/checkout@v4
 
       # Vérifie que la stack d'évaluation reste constructible et démarrable.
       - name: Valider docker-compose.yml
         run: docker compose config --quiet
-        env:
-          JWT_SECRET: secret-de-ci
-          POSTGRES_PASSWORD: parqueo
 
       - name: Construire les images
         run: docker compose build
-        env:
-          JWT_SECRET: secret-de-ci
-          POSTGRES_PASSWORD: parqueo
 
       - name: Démarrer la stack et attendre l'API
-        env:
-          JWT_SECRET: secret-de-ci
-          POSTGRES_PASSWORD: parqueo
         run: |
           docker compose up -d
           for i in $(seq 1 60); do
