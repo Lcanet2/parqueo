@@ -21,6 +21,7 @@ import { intuneEnabled } from '../services/intune.js';
 import { snmpEnabled } from '../services/snmp.js';
 import { text } from '../lib/input.js';
 import { DOSSIER_AVATARS } from './avatars.js';
+import { demoActif, refusDemo } from '../lib/demo.js';
 
 const router = Router();
 
@@ -74,7 +75,7 @@ function issueToken(user) {
 // Le client interroge cet endpoint pour savoir s'il doit afficher le bouton SSO
 // et, côté admin, le bouton de synchronisation Intune.
 router.get('/config', (req, res) => {
-  res.json({ sso: ssoEnabled(), intune: intuneEnabled(), snmp: snmpEnabled() });
+  res.json({ sso: ssoEnabled(), intune: intuneEnabled(), snmp: snmpEnabled(), demo: demoActif() });
 });
 
 router.post('/login', async (req, res) => {
@@ -218,7 +219,7 @@ router.patch('/password', authRequired, async (req, res) => {
 
 // Chacun gère sa propre photo : passer par un administrateur pour changer son
 // portrait n'aurait aucun sens.
-router.post('/avatar', authRequired, envoiAvatar.single('file'), async (req, res) => {
+router.post('/avatar', authRequired, (req, res, next) => (demoActif() ? refusDemo(res) : next()), envoiAvatar.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Image attendue : PNG, JPEG, WebP ou GIF, 2 Mo maximum' });
   }

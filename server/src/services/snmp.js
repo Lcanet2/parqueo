@@ -1,6 +1,7 @@
 import snmp from 'net-snmp';
 import { expandCidr, snmpToInventory } from '../lib/snmp.js';
 import { ingest } from './inventory.js';
+import { demoActif } from '../lib/demo.js';
 
 // Scan réseau SNMP : découverte sans agent des équipements qui répondent en SNMP
 // (imprimantes, switches, routeurs, NAS, onduleurs, serveurs). Le serveur
@@ -21,6 +22,7 @@ const OID_SERIAL = '1.3.6.1.2.1.47.1.1.1.1.11.1'; // entPhysicalSerialNum (1re e
 const OID_SYS_OBJECT = '1.3.6.1.2.1.1.2.0';
 
 export function snmpEnabled() {
+  if (demoActif()) return false; // voir lib/demo.js
   return process.env.SNMP_ENABLED === 'true' && Boolean(process.env.SNMP_RANGES);
 }
 

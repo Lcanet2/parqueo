@@ -31,6 +31,14 @@
 	}
 
 	header {
+		# Piloté par l'environnement : `all` ne restreint rien, et c'est le
+		# défaut. L'instance de démonstration y met « noindex, nofollow » pour
+		# ne pas concurrencer le site dans les résultats de recherche avec des
+		# tickets fictifs.
+		# Guillemets indispensables : « noindex, nofollow » non protégé est lu
+		# comme deux arguments, donc comme une opération de remplacement, et
+		# l'en-tête n'est jamais émis.
+		X-Robots-Tag "{$ROBOTS_TAG:all}"
 		# Le navigateur ne devine pas le type d'un fichier servi.
 		X-Content-Type-Options nosniff
 		# L'application n'a aucune raison d'être encadrée par un tiers.

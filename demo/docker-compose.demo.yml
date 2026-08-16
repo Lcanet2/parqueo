@@ -1,0 +1,87 @@
+# Instance publique de démonstration — demo.parqueo.fr
+#
+#   cd demo
+#   cp .env.demo.example .env
+#   # renseigner DOMAIN, puis générer les secrets :
+#   printf 'JWT_SECRET=%s\nPOSTGRES_PASSWORD=%s\n' "$(openssl rand -base64 36 | tr -d '\n/+=')" "$(openssl rand -base64 36 | tr -d '\n/+=')" >> .env
+#   docker compose -f docker-compose.demo.yml up -d
+#   ./reinitialiser.sh          # pose le jeu de données
+#
+# Ce n'est PAS le fichier d'une installation normale : voir
+# docker-compose.prod.yml à la racine. Celui-ci ajoute DEMO_MODE, qui bride
+# volontairement l'application (voir server/src/lib/demo.js).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-parqueo}
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?manquant}'
+      POSTGRES_DB: ${POSTGRES_DB:-parqueo}
+    volumes:
+      - demo-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-parqueo} -d ${POSTGRES_DB:-parqueo}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    image: ghcr.io/lcanet2/parqueo-api:${PARQUEO_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-parqueo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-parqueo}?schema=public'
+      JWT_SECRET: '${JWT_SECRET:?manquant}'
+      PORT: '4000'
+      CLIENT_ORIGIN: 'https://${DOMAIN:?renseignez le domaine de la démonstration}'
+      APP_URL: 'https://${DOMAIN}'
+      # Le cœur du dispositif : neutralise tout ce dont la sûreté reposait sur
+      # la confiance faite à l'administrateur — webhook, courrier, IMAP, SNMP,
+      # Intune, envoi de photo. Voir server/src/lib/demo.js.
+      DEMO_MODE: 'true'
+      # L'amorçage ne crée aucun compte : c'est reinitialiser.sh qui pose le jeu
+      # de démonstration, comptes compris.
+      SEED_ON_START: 'true'
+      # Aucune option sortante n'est renseignée, et DEMO_MODE les ignorerait de
+      # toute façon. Les laisser vides évite toute méprise à la lecture.
+      SMTP_HOST: ''
+      INVENTORY_TOKEN: ''
+    volumes:
+      - demo-uploads:/app/uploads
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+  web:
+    image: ghcr.io/lcanet2/parqueo-web:${PARQUEO_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      SITE_ADDRESS: '${DOMAIN}'
+      # Des tickets fictifs n'ont rien à faire dans les résultats de recherche,
+      # et la démonstration ne doit pas concurrencer parqueo.fr.
+      ROBOTS_TAG: 'noindex, nofollow'
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - demo-caddy:/data
+
+volumes:
+  demo-db:
+  demo-uploads:
+  demo-caddy:

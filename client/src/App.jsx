@@ -5,6 +5,7 @@ import Settings from './pages/Settings.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Setup from './pages/Setup.jsx';
+import DemoBanner from './components/DemoBanner.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Tickets from './pages/Tickets.jsx';
 import TicketDetail from './pages/TicketDetail.jsx';
@@ -68,6 +69,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <GlobalErrors />
+        <DemoBanner />
         <Routes>
           <Route path="/installation" element={<SetupOnly />} />
           <Route path="/login" element={<LoginOrSetup />} />

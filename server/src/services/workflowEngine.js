@@ -8,6 +8,7 @@ import {
 } from '../lib/workflowUtils.js';
 import { sendMail } from './mailer.js';
 import { statutApresAssignation } from '../lib/statut.js';
+import { demoActif } from '../lib/demo.js';
 
 // Moteur de workflows : parcours de graphe à états. Un ticket qui correspond à
 // un workflow « ticket créé » entre au bloc du déclencheur et suit les fils
@@ -234,6 +235,11 @@ async function applyAction(step, ticket, wf) {
     }
     // Passerelle vers n8n, Zapier ou tout autre outil : POST JSON du ticket.
     case 'webhook': {
+      // Sur une instance de démonstration, l'administrateur est un inconnu :
+      // le laisser choisir l'adresse que le serveur appelle en ferait un relais
+      // vers les IP internes ou l'extérieur. Le bloc reste visible et
+      // configurable dans l'éditeur, il ne part simplement pas.
+      if (demoActif()) return ticket;
       if (!/^https?:\/\//.test(cfg.url ?? '')) return ticket;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);

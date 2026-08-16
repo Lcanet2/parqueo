@@ -5,12 +5,14 @@ import { Avatar, Button, Card, Field, Input, ErrorText, PageHeader } from '../co
 import { IconTrash } from '../components/icons.jsx';
 import { ROLE } from '../lib/labels.js';
 import { ThemeChoice } from '../components/ThemeToggle.jsx';
+import { useDemo } from '../components/DemoBanner.jsx';
 
 // Mon compte : informations du compte connecté et changement de mot de passe.
 // Les comptes Microsoft n'ont pas de mot de passe local : le formulaire est
 // remplacé par un renvoi vers Microsoft.
 export default function Account() {
   const { user, updateUser } = useAuth();
+  const demo = useDemo();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -62,7 +64,9 @@ export default function Account() {
         </p>
       </Card>
 
-      <PhotoDeProfil user={user} onChange={updateUser} />
+      {/* En démonstration l'envoi est refusé côté serveur : afficher un
+          bouton qui échoue à tous les coups vaut moins que ne rien afficher. */}
+      {!demo && <PhotoDeProfil user={user} onChange={updateUser} />}
 
       <Card title="Apparence">
         <div className="space-y-2 px-4 py-4">

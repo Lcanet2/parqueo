@@ -1,5 +1,6 @@
 import { intuneDeviceToInventory } from '../lib/inventory.js';
 import { ingest } from './inventory.js';
+import { demoActif } from '../lib/demo.js';
 
 // Connecteur Microsoft Intune (Endpoint Manager) via Microsoft Graph. Réutilise
 // l'app registration Entra du SSO (SSO_TENANT_ID / SSO_CLIENT_ID /
@@ -10,6 +11,7 @@ import { ingest } from './inventory.js';
 // n'a pas fait cette démarche.
 
 export function intuneEnabled() {
+  if (demoActif()) return false; // voir lib/demo.js
   return (
     process.env.INTUNE_ENABLED === 'true' &&
     Boolean(process.env.SSO_TENANT_ID && process.env.SSO_CLIENT_ID && process.env.SSO_CLIENT_SECRET)

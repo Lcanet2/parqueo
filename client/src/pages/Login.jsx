@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Button, Input, Field, ErrorText } from '../components/ui.jsx';
 import Brand from '../components/Brand.jsx';
+import { useDemo, COMPTES_DEMO, MOT_DE_PASSE_DEMO } from '../components/DemoBanner.jsx';
 
 export default function Login() {
   const { login, sessionMessage } = useAuth();
@@ -13,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [ssoOn, setSsoOn] = useState(false);
+  const demo = useDemo();
 
   // Le serveur indique si le SSO est configuré (affichage du bouton).
   useEffect(() => {
@@ -21,6 +23,18 @@ export default function Login() {
     const err = new URLSearchParams(window.location.search).get('sso_error');
     if (err) setError(err);
   }, []);
+
+  async function entrerEnDemo(email) {
+    setError(null);
+    setBusy(true);
+    try {
+      await login(email, MOT_DE_PASSE_DEMO);
+      navigate('/');
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -53,6 +67,28 @@ export default function Login() {
             {sessionMessage}
           </p>
         )}
+        {demo && (
+          <div className="mb-4 rounded-lg border border-accent/30 bg-accent-soft p-4">
+            <p className="mb-2 text-sm font-medium text-accent-strong">Entrer dans la démonstration</p>
+            <p className="mb-3 text-xs text-ink-soft">
+              Choisissez un rôle : ce que vous voyez de Parqueo en dépend.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {COMPTES_DEMO.map((c) => (
+                <Button
+                  key={c.email}
+                  type="button"
+                  variant={c.libelle === 'Administrateur' ? 'primary' : 'default'}
+                  disabled={busy}
+                  onClick={() => entrerEnDemo(c.email)}
+                >
+                  {c.libelle}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <form
           onSubmit={onSubmit}
           className="space-y-4 rounded-lg border border-line bg-surface p-6"

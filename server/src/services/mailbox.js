@@ -9,6 +9,7 @@ import { visibilityWhere } from '../lib/visibility.js';
 import { LIMITS, tronque } from '../lib/input.js';
 import { onTicketCreated } from './workflowEngine.js';
 import { notifyTicketCreated, notifyCommentAdded } from './mailer.js';
+import { demoActif } from '../lib/demo.js';
 
 // Collecteur email : les messages envoyés à la boîte IMAP_USER deviennent des
 // tickets ; les réponses (sujet contenant « Ticket #n ») deviennent des
@@ -152,6 +153,7 @@ async function pollOnce() {
 }
 
 export function startMailbox() {
+  if (demoActif()) return; // voir lib/demo.js
   if (!process.env.IMAP_HOST) return;
   const interval = Math.max(Number(process.env.IMAP_POLL_SECONDS) || 60, 15) * 1000;
   let running = false;

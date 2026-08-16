@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
+import { demoActif } from '../lib/demo.js';
 
 // SSO Microsoft Entra ID via OpenID Connect (authorization code flow, client
 // confidentiel). Aucune dépendance externe : découverte + JWKS récupérés par
@@ -10,6 +11,7 @@ import jwt from 'jsonwebtoken';
 // SSO_ALLOWED_DOMAINS (liste optionnelle), SSO_POST_LOGIN_URL.
 
 export function ssoEnabled() {
+  if (demoActif()) return false; // voir lib/demo.js
   return Boolean(process.env.SSO_TENANT_ID && process.env.SSO_CLIENT_ID && process.env.SSO_CLIENT_SECRET);
 }
 

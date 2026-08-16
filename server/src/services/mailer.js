@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../lib/labels.js';
 import { getAppSettings } from '../lib/appSettings.js';
+import { demoActif } from '../lib/demo.js';
 
 // Sans SMTP_HOST configuré (dev), les emails sont simplement loggés en console.
 const transport = process.env.SMTP_HOST
@@ -16,6 +17,7 @@ const transport = process.env.SMTP_HOST
 
 // Exposé pour les étapes « email » des workflows.
 export async function sendMail(to, subject, text) {
+  if (demoActif()) return; // voir lib/demo.js
   return send(to, subject, text);
 }
 
