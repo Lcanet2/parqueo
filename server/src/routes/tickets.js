@@ -77,8 +77,8 @@ const upload = multer({
 
 const ticketInclude = {
   category: true,
-  author: { select: { id: true, name: true, email: true } },
-  assignee: { select: { id: true, name: true, email: true } },
+  author: { select: { id: true, name: true, email: true, avatar: true } },
+  assignee: { select: { id: true, name: true, email: true, avatar: true } },
   team: true,
   asset: { select: { id: true, name: true, type: true } },
 };
@@ -228,10 +228,10 @@ router.get('/:id', async (req, res) => {
     include: {
       ...ticketInclude,
       comments: {
-        include: { author: { select: { id: true, name: true } } },
+        include: { author: { select: { id: true, name: true, avatar: true } } },
         orderBy: { createdAt: 'asc' },
       },
-      attachments: { include: { uploader: { select: { id: true, name: true } } } },
+      attachments: { include: { uploader: { select: { id: true, name: true, avatar: true } } } },
       workflowRuns: {
         where: { status: 'running' },
         include: { workflow: { include: { steps: true } } },
@@ -430,7 +430,7 @@ router.post('/:id/comments', async (req, res) => {
       type: 'comment',
       body,
     },
-    include: { author: { select: { id: true, name: true } } },
+    include: { author: { select: { id: true, name: true, avatar: true } } },
   });
 
   notifyCommentAdded(ticket, comment);

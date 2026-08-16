@@ -126,7 +126,7 @@ function MessageHeader({ author, isRequester, isMe, createdAt }) {
 function Message({ author, createdAt, body, isRequester, isMe }) {
   return (
     <li className="flex gap-3">
-      <Avatar name={author?.name} id={author?.id ?? 0} />
+      <Avatar name={author?.name} id={author?.id ?? 0} avatar={author?.avatar} />
       <div className="min-w-0 flex-1">
         <MessageHeader author={author} isRequester={isRequester} isMe={isMe} createdAt={createdAt} />
         <div
@@ -150,7 +150,7 @@ function AttachmentItem({ attachment, ticketId, requesterId, currentUserId, onDo
 
   return (
     <li className="flex gap-3">
-      <Avatar name={author?.name} id={author?.id ?? 0} />
+      <Avatar name={author?.name} id={author?.id ?? 0} avatar={author?.avatar} />
       <div className="min-w-0 flex-1">
         <MessageHeader
           author={author}
@@ -408,7 +408,7 @@ export default function TicketDetail() {
 
           <form onSubmit={send} className="border-t border-line p-3">
             <div className="flex gap-3">
-              <Avatar name={user.name} id={user.id} />
+              <Avatar name={user.name} id={user.id} avatar={user.avatar} />
               <div className="min-w-0 flex-1">
                 <Textarea
                   aria-label="Votre réponse"
@@ -545,7 +545,7 @@ export default function TicketDetail() {
           <Card title="Participants">
             <ul className="space-y-2.5 p-4">
               <li className="flex items-center gap-2.5">
-                <Avatar name={ticket.author?.name} id={ticket.author?.id ?? 0} size="sm" />
+                <Avatar name={ticket.author?.name} id={ticket.author?.id ?? 0} avatar={ticket.author?.avatar} size="sm" />
                 <div className="min-w-0">
                   <div className="truncate text-sm">{ticket.author?.name}</div>
                   <div className="text-xs text-ink-faint">Demandeur</div>
@@ -553,7 +553,7 @@ export default function TicketDetail() {
               </li>
               {ticket.assignee ? (
                 <li className="flex items-center gap-2.5">
-                  <Avatar name={ticket.assignee.name} id={ticket.assignee.id} size="sm" />
+                  <Avatar name={ticket.assignee.name} id={ticket.assignee.id} avatar={ticket.assignee.avatar} size="sm" />
                   <div className="min-w-0">
                     <div className="truncate text-sm">{ticket.assignee.name}</div>
                     <div className="text-xs text-ink-faint">

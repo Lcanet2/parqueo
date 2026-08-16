@@ -61,6 +61,10 @@ model User {
   provider     String   @default("local")
   name         String
   role         Role     @default(user)
+  // Nom de fichier opaque de la photo de profil (voir src/routes/avatars.js),
+  // ou null pour les initiales. Le nom change à chaque envoi : il sert donc à la
+  // fois de purge de cache et de jeton d'accès.
+  avatar       String?
   teamId       Int?     @map("team_id")
   team         Team?    @relation(fields: [teamId], references: [id])
   createdAt    DateTime @default(now()) @map("created_at")

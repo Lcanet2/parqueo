@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import setupRoutes from './routes/setup.js';
 import aboutRoutes from './routes/about.js';
+import avatarRoutes from './routes/avatars.js';
 import ticketRoutes from './routes/tickets.js';
 import assetRoutes from './routes/assets.js';
 import inventoryRoutes from './routes/inventory.js';
@@ -54,6 +55,9 @@ export function createApp() {
 
   // Publique et auto-refermante : ne répond que tant qu'aucun compte n'existe.
   app.use('/api/setup', setupRoutes);
+  // Publique par capacité : l'adresse d'une photo est un secret de 32
+  // caractères, voir routes/avatars.js.
+  app.use('/api/avatars', avatarRoutes);
   app.use('/api/about', aboutRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/tickets', ticketRoutes);

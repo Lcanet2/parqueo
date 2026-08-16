@@ -17,6 +17,7 @@ const publicSelect = {
   role: true,
   teamId: true,
   team: true,
+  avatar: true,
   createdAt: true,
 };
 
@@ -27,7 +28,7 @@ router.use(authRequired);
 router.get('/assignable', requireRole('admin', 'technician'), async (req, res) => {
   const users = await prisma.user.findMany({
     where: { role: { in: ['admin', 'technician'] } },
-    select: { id: true, name: true, role: true, teamId: true },
+    select: { id: true, name: true, role: true, teamId: true, avatar: true },
     orderBy: { name: 'asc' },
   });
   res.json(users);
