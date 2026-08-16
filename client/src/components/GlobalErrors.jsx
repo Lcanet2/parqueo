@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { IconX, IconAlert } from './icons.jsx';
+import { IconButton } from './ui.jsx';
 
 // Filet de sécurité : un appel d'API dont l'échec n'est pas traité par la page
 // remonte ici au lieu de disparaître silencieusement dans la console. Les 401
@@ -29,17 +31,13 @@ export default function GlobalErrors() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center p-4">
       <div
         role="alert"
-        className="pointer-events-auto flex items-center gap-3 rounded-md border border-accent bg-accent-soft px-4 py-2.5"
+        className="pointer-events-auto flex items-center gap-3 rounded-md border border-accent bg-accent-soft py-1.5 pr-1.5 pl-4 shadow-sm"
       >
+        <IconAlert className="shrink-0 text-accent" />
         <span className="text-sm text-ink">{message}</span>
-        <button
-          type="button"
-          onClick={() => setMessage(null)}
-          aria-label="Fermer"
-          className="shrink-0 cursor-pointer text-ink-faint transition-colors hover:text-ink"
-        >
-          ✕
-        </button>
+        <IconButton label="Fermer le message" onClick={() => setMessage(null)}>
+          <IconX />
+        </IconButton>
       </div>
     </div>
   );

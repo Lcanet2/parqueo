@@ -3,8 +3,17 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useResource } from '../lib/useResource.js';
-import { Button, Input, Select, Spinner, Card, ErrorState } from '../components/ui.jsx';
+import {
+  Button,
+  SearchInput,
+  Select,
+  Card,
+  ErrorState,
+  PageHeader,
+  TableSkeleton,
+} from '../components/ui.jsx';
 import TicketTable from '../components/TicketTable.jsx';
+import { Pagination } from '../components/Pagination.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../lib/labels.js';
 
 const SORTS = [
@@ -13,7 +22,6 @@ const SORTS = [
   { value: 'priority', label: 'Priorité haute d’abord' },
 ];
 
-const PAGE_SIZES = ['10', '25', '50', '100', '500', 'all'];
 const DEFAULT_PAGE_SIZE = '25';
 
 // Colonne du tableau (clé TicketTable) ↔ colonne de tri de l'API.
@@ -55,8 +63,6 @@ export default function Tickets() {
   const q = params.get('q') ?? '';
   const page = Math.max(Number(params.get('page')) || 1, 1);
   const pageSize = params.get('pageSize') ?? DEFAULT_PAGE_SIZE;
-  const isAll = pageSize === 'all';
-  const size = isAll ? 0 : Number(pageSize);
 
   // Listes de référence des filtres : leur échec ne bloque pas la page, il vide
   // simplement le menu concerné — la liste principale porte le message d'erreur.
@@ -110,6 +116,11 @@ export default function Tickets() {
     setParams(next, { replace: true });
   }
 
+  function clearFilters() {
+    setSearch('');
+    setParams(status ? new URLSearchParams({ status }) : new URLSearchParams(), { replace: true });
+  }
+
   const hasFilters = priority || assignee || author || category || team || q;
   const visible = loading || error ? null : data?.items ?? null;
   const totalAll = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
@@ -124,25 +135,28 @@ export default function Tickets() {
     })),
   ];
 
-  const from = (page - 1) * size + 1;
-  const to = data ? Math.min(page * size, data.total) : 0;
-
   return (
     <div className="mx-auto max-w-page space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold tracking-tight">Tickets</h1>
-        <Link to="/tickets/nouveau">
-          <Button variant="primary">Nouveau ticket</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Tickets"
+        actions={
+          <Link to="/tickets/nouveau">
+            <Button variant="primary">Nouveau ticket</Button>
+          </Link>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* Filtres rapides par statut. Le compteur est porté par le libellé, pas
+          par la couleur : la puce active est repérable sans distinguer le rouge. */}
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtrer par statut">
         {chips.map((c) => (
           <button
             key={c.value}
+            type="button"
+            aria-pressed={status === c.value}
             onClick={() => setFilter('status', c.value)}
             className={[
-              'flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors',
+              'flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors [@media(pointer:coarse)]:min-h-11',
               status === c.value
                 ? 'border-accent bg-accent-soft font-medium text-accent'
                 : 'border-line bg-surface text-ink-soft hover:border-ink-faint hover:text-ink',
@@ -156,27 +170,38 @@ export default function Tickets() {
 
       <div className="flex flex-wrap items-center gap-2">
         <form
-          className="min-w-40 flex-1"
+          role="search"
+          className="min-w-56 flex-1"
           onSubmit={(e) => {
             e.preventDefault();
             setFilter('q', search.trim());
           }}
         >
-          <Input
+          <SearchInput
             placeholder="Rechercher un ticket…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </form>
 
-        <Select value={category} onChange={(e) => setFilter('category', e.target.value)} className="w-auto">
+        <Select
+              aria-label="Catégorie"
+              value={category}
+              onChange={(e) => setFilter('category', e.target.value)}
+              className="w-auto"
+            >
           <option value="">Toutes catégories</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </Select>
 
-        <Select value={priority} onChange={(e) => setFilter('priority', e.target.value)} className="w-auto">
+        <Select
+              aria-label="Priorité"
+              value={priority}
+              onChange={(e) => setFilter('priority', e.target.value)}
+              className="w-auto"
+            >
           <option value="">Toutes priorités</option>
           {Object.entries(TICKET_PRIORITY).map(([k, v]) => (
             <option key={k} value={k}>{v.label}</option>
@@ -185,7 +210,12 @@ export default function Tickets() {
 
         {isStaff && (
           <>
-            <Select value={assignee} onChange={(e) => setFilter('assignee', e.target.value)} className="w-auto">
+            <Select
+              aria-label="Assigné à"
+              value={assignee}
+              onChange={(e) => setFilter('assignee', e.target.value)}
+              className="w-auto"
+            >
               <option value="">Tous assignés</option>
               <option value="me">Assignés à moi</option>
               <option value="none">Non assignés</option>
@@ -195,11 +225,21 @@ export default function Tickets() {
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
             </Select>
-            <Select value={author} onChange={(e) => setFilter('author', e.target.value)} className="w-auto">
+            <Select
+              aria-label="Demandeur"
+              value={author}
+              onChange={(e) => setFilter('author', e.target.value)}
+              className="w-auto"
+            >
               <option value="">Tous demandeurs</option>
               <option value="me">Mes demandes</option>
             </Select>
-            <Select value={team} onChange={(e) => setFilter('team', e.target.value)} className="w-auto">
+            <Select
+              aria-label="Équipe"
+              value={team}
+              onChange={(e) => setFilter('team', e.target.value)}
+              className="w-auto"
+            >
               <option value="">Toutes équipes</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
@@ -208,20 +248,19 @@ export default function Tickets() {
           </>
         )}
 
-        <Select value={selectSort} onChange={(e) => setFilter('sort', e.target.value)} className="w-auto">
+        <Select
+          aria-label="Ordre de tri"
+          value={selectSort}
+          onChange={(e) => setFilter('sort', e.target.value)}
+          className="w-auto"
+        >
           {SORTS.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </Select>
 
         {hasFilters && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSearch('');
-              setParams(status ? new URLSearchParams({ status }) : new URLSearchParams(), { replace: true });
-            }}
-          >
+          <Button variant="ghost" onClick={clearFilters}>
             Effacer les filtres
           </Button>
         )}
@@ -231,56 +270,41 @@ export default function Tickets() {
         {error ? (
           <ErrorState error={error} onRetry={reload} />
         ) : visible === null ? (
-          <Spinner />
+          <TableSkeleton rows={6} columns={4} />
         ) : (
           <>
             <TicketTable
               tickets={visible}
               sort={tableSort}
               onSort={onSortColumn}
-              emptyText="Aucun ticket ne correspond à ces critères"
+              emptyText={
+                hasFilters || status ? 'Aucun ticket ne correspond à ces critères' : 'Aucun ticket'
+              }
+              emptyHint={
+                hasFilters || status
+                  ? 'Élargissez la recherche, ou effacez les filtres pour repartir de la liste complète.'
+                  : 'Les demandes créées par les utilisateurs apparaîtront ici.'
+              }
+              emptyAction={
+                hasFilters || status ? (
+                  <Button onClick={clearFilters}>Effacer les filtres</Button>
+                ) : (
+                  <Link to="/tickets/nouveau">
+                    <Button variant="primary">Nouveau ticket</Button>
+                  </Link>
+                )
+              }
             />
-            {data.total > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-2">
-                <span className="text-xs text-ink-soft">
-                  {isAll || data.total <= size
-                    ? `${data.total} ticket${data.total > 1 ? 's' : ''}`
-                    : `${from}–${to} sur ${data.total}`}
-                </span>
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1.5 text-xs text-ink-soft">
-                    Par page
-                    <Select
-                      value={pageSize}
-                      onChange={(e) => setFilter('pageSize', e.target.value)}
-                      className="w-auto"
-                    >
-                      {PAGE_SIZES.map((s) => (
-                        <option key={s} value={s}>{s === 'all' ? 'Tout' : s}</option>
-                      ))}
-                    </Select>
-                  </label>
-                  {!isAll && data.total > size && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        disabled={page <= 1}
-                        onClick={() => setFilter('page', page > 2 ? String(page - 1) : '')}
-                      >
-                        ← Précédent
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={to >= data.total}
-                        onClick={() => setFilter('page', String(page + 1))}
-                      >
-                        Suivant →
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Même pied de page que l'inventaire, les logiciels et l'aide : la
+                page dupliquait cet appareil au lieu du composant commun. */}
+            <Pagination
+              total={data.total}
+              page={page}
+              pageSize={pageSize}
+              unit="ticket"
+              onPage={(p) => setFilter('page', p > 1 ? String(p) : '')}
+              onPageSize={(v) => setFilter('pageSize', v)}
+            />
           </>
         )}
       </Card>

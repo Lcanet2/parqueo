@@ -36,8 +36,11 @@ function BarList({ rows, color = 'var(--color-status-new)', emptyText = 'Aucune 
 function SegmentedBar({ items, total, linkFor }) {
   if (total === 0) return <EmptyState>Aucune donnée</EmptyState>;
   return (
-    <div className="flex h-full flex-col justify-between px-4 py-3">
-      <div className="flex h-3 max-h-10 min-h-3 flex-1 gap-0.5 overflow-hidden rounded">
+    // Groupe centré et barre de hauteur fixe : quand la carte est étirée par sa
+    // rangée, un `justify-between` poussait la légende tout en bas et gonflait
+    // la barre jusqu'à 40 px, ce qui ne lisait plus comme une répartition.
+    <div className="flex h-full flex-col justify-center px-4 py-3">
+      <div className="flex h-3 shrink-0 gap-0.5 overflow-hidden rounded">
         {items
           .filter((i) => i.count > 0)
           .map((i) => (

@@ -3,8 +3,17 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useResource } from '../lib/useResource.js';
-import { Button, Select, Spinner, ErrorState } from '../components/ui.jsx';
+import { Button, IconButton, Select, Spinner, ErrorState, PageHeader } from '../components/ui.jsx';
 import { WIDGET_COMPONENTS } from '../components/widgets.jsx';
+import {
+  IconGrip,
+  IconChevronLeft,
+  IconChevronRight,
+  IconSettings,
+  IconX,
+  IconCheck,
+  IconPlus,
+} from '../components/icons.jsx';
 import {
   CATALOG,
   catalogForRole,
@@ -184,14 +193,16 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-page space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold tracking-tight">Tableau de bord</h1>
-        <div className="flex items-center gap-2">
-          {editing ? (
+      <PageHeader
+        title="Tableau de bord"
+        actions={
+          editing ? (
             <>
               <SaveIndicator state={saveState} />
               <Button onClick={resetCurrent}>Réinitialiser</Button>
-              <Button variant="primary" onClick={stopEditing}>Terminé</Button>
+              <Button variant="primary" onClick={stopEditing}>
+                Terminé
+              </Button>
             </>
           ) : (
             <>
@@ -202,16 +213,21 @@ export default function Dashboard() {
                 <Button variant="primary">Nouveau ticket</Button>
               </Link>
             </>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       {editing && (
         <div className="rounded-lg border border-dashed border-ink-faint bg-surface px-4 py-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2">
             {isAdmin ? (
               <>
-                <Select value={editRole} onChange={(e) => switchRole(e.target.value)} className="w-auto">
+                <Select
+                  aria-label="Rôle dont le tableau de bord est édité"
+                  value={editRole}
+                  onChange={(e) => switchRole(e.target.value)}
+                  className="w-auto"
+                >
                   {ROLE_TABS.map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
@@ -232,7 +248,9 @@ export default function Dashboard() {
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium">Ajouter un widget</span>
-                <Button variant="ghost" onClick={() => setAdding(false)}>Fermer</Button>
+                <IconButton label="Fermer le catalogue de widgets" onClick={() => setAdding(false)}>
+                  <IconX />
+                </IconButton>
               </div>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {catalogForRole(editRole).map(([type, spec]) => (
@@ -249,11 +267,18 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-ink-soft">
-                Mode édition : glissez un widget par sa poignée <span className="text-ink">⠿</span> (ou ‹ ›) pour
-                le déplacer, redimensionnez (S/M/L), configurez (⚙) ou retirez (✕).
+              <p className="flex flex-wrap items-center gap-1 text-sm text-ink-soft">
+                Mode édition : glissez un widget par sa poignée
+                <IconGrip className="text-ink" />
+                (ou les flèches) pour le déplacer, redimensionnez (S/M/L), configurez
+                <IconSettings size={14} className="text-ink" />
+                ou retirez
+                <IconX size={14} className="text-ink" />.
               </p>
-              <Button onClick={() => setAdding(true)}>+ Ajouter un widget</Button>
+              <Button onClick={() => setAdding(true)}>
+                <IconPlus size={14} />
+                Ajouter un widget
+              </Button>
             </div>
           )}
         </div>
@@ -284,25 +309,58 @@ export default function Dashboard() {
                   onDragEnd={onDragEnd}
                 >
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="cursor-grab text-ink-faint active:cursor-grabbing" title="Glisser pour réorganiser" aria-hidden="true">⠿</span>
+                    <span className="cursor-grab text-ink-faint active:cursor-grabbing">
+                      <IconGrip />
+                    </span>
                     <span className="truncate text-xs font-medium text-ink-soft">{spec.name}</span>
                   </span>
+                  {/* Chaque commande porte le nom du widget dans son libellé :
+                      « Déplacer avant » répété huit fois ne dit pas lequel. */}
                   <span className="flex items-center gap-0.5">
-                    <EditBtn onClick={() => move(item.id, -1)} disabled={idx === 0} title="Déplacer avant">‹</EditBtn>
-                    <EditBtn onClick={() => move(item.id, 1)} disabled={idx === items.length - 1} title="Déplacer après">›</EditBtn>
+                    <IconButton
+                      label={`Déplacer « ${spec.name} » avant`}
+                      onClick={() => move(item.id, -1)}
+                      disabled={idx === 0}
+                      className="h-7 w-7"
+                    >
+                      <IconChevronLeft size={14} />
+                    </IconButton>
+                    <IconButton
+                      label={`Déplacer « ${spec.name} » après`}
+                      onClick={() => move(item.id, 1)}
+                      disabled={idx === items.length - 1}
+                      className="h-7 w-7"
+                    >
+                      <IconChevronRight size={14} />
+                    </IconButton>
                     {spec.sizes.length > 1 && (
-                      <EditBtn onClick={() => resize(item.id)} title="Taille">{SIZE_LABEL[item.size]}</EditBtn>
+                      <IconButton
+                        label={`Taille de « ${spec.name} » (actuellement ${SIZE_LABEL[item.size]})`}
+                        onClick={() => resize(item.id)}
+                        className="h-7 w-7 text-xs font-semibold"
+                      >
+                        {SIZE_LABEL[item.size]}
+                      </IconButton>
                     )}
                     {spec.config.length > 0 && (
-                      <EditBtn
+                      <IconButton
+                        label={`Configurer « ${spec.name} »`}
                         onClick={() => setConfiguring(configuring === item.id ? null : item.id)}
-                        title="Configurer"
-                        active={configuring === item.id}
+                        aria-expanded={configuring === item.id}
+                        variant={configuring === item.id ? 'active' : 'ghost'}
+                        className="h-7 w-7"
                       >
-                        ⚙
-                      </EditBtn>
+                        <IconSettings size={14} />
+                      </IconButton>
                     )}
-                    <EditBtn onClick={() => remove(item.id)} title="Retirer">✕</EditBtn>
+                    <IconButton
+                      label={`Retirer « ${spec.name} »`}
+                      onClick={() => remove(item.id)}
+                      variant="danger"
+                      className="h-7 w-7"
+                    >
+                      <IconX size={14} />
+                    </IconButton>
                   </span>
                 </div>
               )}
@@ -345,28 +403,19 @@ export default function Dashboard() {
   );
 }
 
-function EditBtn({ children, active = false, ...props }) {
-  return (
-    <button
-      {...props}
-      className={[
-        'h-7 min-w-7 cursor-pointer rounded px-1 text-sm leading-none transition-colors sm:h-6 sm:min-w-6 disabled:cursor-default disabled:opacity-30',
-        active ? 'bg-accent-soft text-accent' : 'text-ink-soft hover:bg-line hover:text-ink',
-      ].join(' ')}
-    >
-      {children}
-    </button>
-  );
-}
-
 // Retour visuel de la sauvegarde du layout (au lieu d'échouer en silence).
 function SaveIndicator({ state }) {
   if (state === 'idle') return null;
   const map = {
     saving: { text: 'Enregistrement…', cls: 'text-ink-faint' },
-    saved: { text: 'Enregistré ✓', cls: 'text-status-resolved' },
+    saved: { text: 'Enregistré', cls: 'text-status-resolved', icon: true },
     error: { text: 'Échec de l’enregistrement', cls: 'text-accent' },
   };
-  const { text, cls } = map[state];
-  return <span className={`text-xs ${cls}`} role="status">{text}</span>;
+  const { text, cls, icon } = map[state];
+  return (
+    <span className={`flex items-center gap-1 text-xs ${cls}`} role="status">
+      {icon && <IconCheck size={12} />}
+      {text}
+    </span>
+  );
 }

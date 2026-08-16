@@ -10,20 +10,28 @@
      bandes vides de part et d'autre alors que les colonnes manquaient d'air.
      Les écrans de lecture et de saisie gardent une largeur courte : une ligne
      de texte de 150 caractères ne se lit pas, et un formulaire étiré non plus. */
-  --container-page: 100rem; /* 1600 px */
+  --container-page: 100rem; /* 1600 px — tableaux, grilles de widgets */
   --container-liste: 64rem; /* 1024 px — listes simples, catalogue de demandes */
+  --container-lecture: 48rem; /* 768 px — article, réglages, détail d'un actif */
+  --container-form: 36rem; /* 576 px — formulaire de saisie */
 
-  /* Palette sobre inspirée n8n, version claire */
+  /* Palette sobre inspirée n8n, version claire.
+     Les valeurs sont choisies pour tenir le contraste AA (4.5:1) sur les DEUX
+     fonds de l'application — `surface` (blanc) et `canvas` — et non sur le seul
+     blanc : un texte secondaire posé sur une ligne survolée reste lisible. */
   --color-canvas: #f7f7f8;
   --color-surface: #ffffff;
-  --color-line: #e4e4e7;
-  --color-ink: #1c1c21;
-  --color-ink-soft: #6b6b76;
-  --color-ink-faint: #9b9ba4;
+  --color-line: #e4e4e7; /* séparateurs et bordures de cartes (décor) */
+  --color-field: #8f8f99; /* bordure des contrôles : 3.2:1, la limite du champ se voit */
+  --color-ink: #1c1c21; /* 17.0:1 */
+  --color-ink-soft: #6b6b76; /* 5.3:1 sur surface, 4.9:1 sur canvas */
+  --color-ink-faint: #71717a; /* 4.8:1 sur surface, 4.5:1 sur canvas */
 
-  /* Accent unique, utilisé avec parcimonie */
-  --color-accent: #d9435f;
-  --color-accent-strong: #bf3651;
+  /* Accent unique, utilisé avec parcimonie.
+     #c6364f plutôt que le #d9435f d'origine : même teinte, mais 5.2:1 — le
+     libellé blanc d'un bouton primaire et les liens d'accent passent AA. */
+  --color-accent: #c6364f;
+  --color-accent-strong: #a92742;
   --color-accent-soft: #fdf0f2;
 
   /* États tickets */
@@ -37,6 +45,11 @@
   --color-status-resolved-bg: #ebf7ef;
   --color-status-closed: #52525b;
   --color-status-closed-bg: #f0f0f1;
+
+  /* Anneau de focus : l'encre, pas l'accent. L'accent signale déjà l'élément de
+     navigation actif ; un anneau de la même couleur rendrait les deux signaux
+     indiscernables. Le noir contraste sur tous les fonds de l'application. */
+  --color-focus: #1c1c21;
 }
 
 html {
@@ -47,5 +60,44 @@ html {
 body {
   font-family: var(--font-sans);
   font-size: 14px;
+  /* 1.5 : la valeur `normal` d'Inter (~1.2) serre les descriptions de tickets et
+     les articles d'aide au point de gêner la lecture d'un paragraphe. */
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* --- Focus clavier, une seule règle pour toute l'application ---------------
+   `:where()` garde une spécificité nulle : un composant peut toujours redéfinir
+   son propre anneau. `outline` plutôt qu'une ombre portée — l'outline ne décale
+   rien et n'est pas rognée par les `overflow-hidden` des cartes et tableaux.
+   `:focus-visible` seulement : le clic à la souris ne fait pas apparaître
+   l'anneau, la navigation au clavier oui. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Cible du lien d'évitement et des ancres : la ligne visée ne se colle pas au
+   bord haut de la fenêtre. */
+:target {
+  scroll-margin-top: 1rem;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+/* Un utilisateur qui a demandé moins d'animations n'en reçoit plus : le spinner
+   et les pulsations de chargement se figent, les transitions deviennent
+   instantanées. Le reste de l'interface est inchangé. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

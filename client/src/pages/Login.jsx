@@ -46,7 +46,10 @@ export default function Login() {
           <p className="text-sm text-ink-soft">Connectez-vous pour continuer</p>
         </div>
         {sessionMessage && !error && (
-          <p className="mb-4 rounded-md border border-line bg-surface px-3 py-2 text-center text-sm text-ink-soft">
+          <p
+            role="status"
+            className="mb-4 rounded-md border border-line bg-surface px-3 py-2 text-center text-sm text-ink-soft"
+          >
             {sessionMessage}
           </p>
         )}
@@ -73,7 +76,7 @@ export default function Login() {
             </>
           )}
 
-          <Field label="Email">
+          <Field label="Email" required>
             <Input
               type="email"
               value={email}
@@ -83,7 +86,7 @@ export default function Login() {
               required
             />
           </Field>
-          <Field label="Mot de passe">
+          <Field label="Mot de passe" required>
             <Input
               type="password"
               value={password}
@@ -93,7 +96,7 @@ export default function Login() {
             />
           </Field>
           <ErrorText>{error}</ErrorText>
-          <Button variant="primary" type="submit" disabled={busy} className="w-full">
+          <Button variant="primary" type="submit" disabled={busy} aria-busy={busy} className="w-full">
             {busy ? 'Connexion…' : 'Se connecter'}
           </Button>
         </form>

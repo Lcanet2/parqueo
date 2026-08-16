@@ -197,3 +197,117 @@ export const IconZap = (p) => (
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </Icon>
 );
+
+// --- Commandes d'interface ---
+// Le mode édition du tableau de bord, la pagination et le tri des tableaux
+// utilisaient des glyphes texte (⚙ ✕ ‹ › ⠿ ↑ ↓ ← →). Rendus par la police du
+// poste, ils changeaient d'épaisseur et d'alignement d'une machine à l'autre et
+// juraient avec les tracés lucide du reste de l'interface.
+
+export const IconX = (p) => (
+  <Icon {...p}>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </Icon>
+);
+
+export const IconCheck = (p) => (
+  <Icon {...p}>
+    <polyline points="20 6 9 17 4 12" />
+  </Icon>
+);
+
+export const IconChevronLeft = (p) => (
+  <Icon {...p}>
+    <polyline points="15 18 9 12 15 6" />
+  </Icon>
+);
+
+export const IconChevronDown = (p) => (
+  <Icon {...p}>
+    <polyline points="6 9 12 15 18 9" />
+  </Icon>
+);
+
+export const IconChevronUp = (p) => (
+  <Icon {...p}>
+    <polyline points="18 15 12 9 6 15" />
+  </Icon>
+);
+
+export const IconArrowLeft = (p) => (
+  <Icon {...p}>
+    <line x1="19" y1="12" x2="5" y2="12" />
+    <polyline points="12 19 5 12 12 5" />
+  </Icon>
+);
+
+export const IconArrowRight = (p) => (
+  <Icon {...p}>
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </Icon>
+);
+
+// Poignée de glisser-déposer : six points, tracés pleins (le contour ne rend
+// rien de lisible à cette taille).
+export const IconGrip = ({ size = 16, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={`shrink-0 ${className}`}
+    aria-hidden="true"
+  >
+    <circle cx="9" cy="6" r="1.6" />
+    <circle cx="15" cy="6" r="1.6" />
+    <circle cx="9" cy="12" r="1.6" />
+    <circle cx="15" cy="12" r="1.6" />
+    <circle cx="9" cy="18" r="1.6" />
+    <circle cx="15" cy="18" r="1.6" />
+  </svg>
+);
+
+// Flèche de tri : pleine, plus lisible qu'un chevron à 10 px dans un en-tête.
+export const IconSortArrow = ({ dir = 'desc', size = 12, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={`shrink-0 ${className}`}
+    aria-hidden="true"
+  >
+    {dir === 'desc' ? <path d="M12 19 5 9h14z" /> : <path d="M12 5l7 10H5z" />}
+  </svg>
+);
+
+export const IconSearch = (p) => (
+  <Icon {...p}>
+    <circle cx="11" cy="11" r="7" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </Icon>
+);
+
+export const IconAlert = (p) => (
+  <Icon {...p}>
+    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </Icon>
+);
+
+// Boîte vide — illustration des états sans donnée.
+export const IconInbox = (p) => (
+  <Icon {...p}>
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+  </Icon>
+);
+
+export const IconFilter = (p) => (
+  <Icon {...p}>
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </Icon>
+);

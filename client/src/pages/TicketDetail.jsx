@@ -2,8 +2,21 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api, getToken } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Avatar, Badge, Button, Select, Textarea, Field, Spinner, ErrorText, Card } from '../components/ui.jsx';
+import {
+  Avatar,
+  Badge,
+  Button,
+  Select,
+  Textarea,
+  Field,
+  Spinner,
+  ErrorText,
+  Card,
+  EmptyState,
+  PageHeader,
+} from '../components/ui.jsx';
 import Combobox from '../components/Combobox.jsx';
+import { IconX, IconHourglass, IconLink } from '../components/icons.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY, formatDateTime } from '../lib/labels.js';
 
 const IMAGE_RE = /\.(png|jpe?g|gif|webp)$/i;
@@ -233,10 +246,17 @@ export default function TicketDetail() {
 
   if (notFound) {
     return (
-      <div className="mx-auto max-w-3xl">
-        <p className="text-sm text-ink-soft">
-          Ticket introuvable. <Link to="/tickets" className="text-accent">Retour aux tickets</Link>
-        </p>
+      <div className="mx-auto max-w-lecture">
+        <EmptyState
+          title="Ticket introuvable"
+          action={
+            <Link to="/tickets">
+              <Button>Retour aux tickets</Button>
+            </Link>
+          }
+        >
+          Il a peut-être été supprimé, ou ne vous est pas visible.
+        </EmptyState>
       </div>
     );
   }
@@ -333,19 +353,19 @@ export default function TicketDetail() {
 
   return (
     <div className="mx-auto max-w-page space-y-4">
-      <div>
-        <div className="mb-1 text-xs text-ink-faint">
-          <Link to="/tickets" className="hover:text-accent">Tickets</Link> / #{ticket.id}
-        </div>
-        <h1 className="text-lg font-semibold tracking-tight">{ticket.title}</h1>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <Badge {...TICKET_STATUS[ticket.status]} />
-          <Badge {...TICKET_PRIORITY[ticket.priority]} />
-          <span className="text-xs text-ink-faint">
-            {ticket.category?.name} · ouvert le {formatDateTime(ticket.createdAt)}
+      <PageHeader
+        title={ticket.title}
+        trail={[{ to: '/tickets', label: 'Tickets' }, { label: `#${ticket.id}` }]}
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            <Badge {...TICKET_STATUS[ticket.status]} />
+            <Badge {...TICKET_PRIORITY[ticket.priority]} />
+            <span className="text-xs text-ink-faint">
+              {ticket.category?.name} · ouvert le {formatDateTime(ticket.createdAt)}
+            </span>
           </span>
-        </div>
-      </div>
+        }
+      />
 
       <ErrorText>{error}</ErrorText>
 
@@ -391,6 +411,7 @@ export default function TicketDetail() {
               <Avatar name={user.name} id={user.id} />
               <div className="min-w-0 flex-1">
                 <Textarea
+                  aria-label="Votre réponse"
                   rows={4}
                   placeholder="Répondre… (collez une capture d'écran directement ici)"
                   value={comment}
@@ -415,10 +436,11 @@ export default function TicketDetail() {
                         <button
                           type="button"
                           onClick={() => removePending(idx)}
+                          aria-label={`Retirer la pièce jointe ${file.name}`}
                           title="Retirer"
-                          className="absolute -top-1.5 -right-1.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-ink text-[9px] leading-none text-white"
+                          className="absolute -top-1.5 -right-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-ink text-white"
                         >
-                          ✕
+                          <IconX size={11} />
                         </button>
                       </li>
                     ))}
@@ -441,8 +463,9 @@ export default function TicketDetail() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="cursor-pointer text-xs text-ink-soft hover:text-accent"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-sm text-xs text-ink-soft hover:text-accent [@media(pointer:coarse)]:min-h-11"
                     >
+                      <IconLink size={14} />
                       Joindre un fichier
                     </button>
                     <span className="hidden text-xs text-ink-faint sm:inline">Ctrl+Entrée pour envoyer</span>
@@ -450,6 +473,7 @@ export default function TicketDetail() {
                   <Button
                     variant="primary"
                     type="submit"
+                    aria-busy={sending}
                     disabled={(!comment.trim() && pendingFiles.length === 0) || sending}
                   >
                     {sending ? 'Envoi…' : 'Envoyer'}
@@ -466,7 +490,9 @@ export default function TicketDetail() {
               <ul className="space-y-2.5 p-4">
                 {ticket.workflows.map((wf, i) => (
                   <li key={i} className="flex items-start gap-2.5">
-                    <span className="mt-0.5 text-sm">⏳</span>
+                    <span className="mt-0.5 text-ink-faint">
+                      <IconHourglass size={14} />
+                    </span>
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium">{wf.name}</div>
                       <div className="text-xs text-ink-soft">{wf.waiting}</div>

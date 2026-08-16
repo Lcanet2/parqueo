@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { Button, Input, Select, Textarea, Field, ErrorText, ErrorState, Spinner } from '../components/ui.jsx';
+import {
+  Button,
+  Input,
+  Select,
+  Textarea,
+  Field,
+  ErrorText,
+  ErrorState,
+  Spinner,
+  EmptyState,
+  PageHeader,
+} from '../components/ui.jsx';
 
 // Remplissage d'un formulaire de demande prédéfini.
 export default function FormFill() {
@@ -28,9 +39,16 @@ export default function FormFill() {
 
   if (notFound) {
     return (
-      <p className="text-sm text-ink-soft">
-        Formulaire introuvable. <Link to="/tickets/nouveau" className="text-accent">Retour au catalogue</Link>
-      </p>
+      <EmptyState
+        title="Formulaire introuvable"
+        action={
+          <Link to="/tickets/nouveau">
+            <Button>Retour au catalogue</Button>
+          </Link>
+        }
+      >
+        Il a peut-être été retiré du catalogue de demandes.
+      </EmptyState>
     );
   }
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
@@ -54,23 +72,26 @@ export default function FormFill() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
-      <div>
-        <div className="mb-1 text-xs text-ink-faint">
-          <Link to="/tickets/nouveau" className="hover:text-accent">Nouvelle demande</Link> / {form.name}
-        </div>
-        <h1 className="text-lg font-semibold tracking-tight">{form.name}</h1>
-        {form.description && <p className="mt-1 text-sm text-ink-soft">{form.description}</p>}
-      </div>
+    <div className="mx-auto max-w-form space-y-4">
+      <PageHeader
+        title={form.name}
+        trail={[
+          { to: '/tickets', label: 'Tickets' },
+          { to: '/tickets/nouveau', label: 'Nouvelle demande' },
+        ]}
+        description={form.description}
+      />
 
       <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-line bg-surface p-5">
         {form.fields.map((field) => {
-          const label = field.required ? `${field.label} *` : field.label;
           const value = answers[field.id] ?? '';
 
           if (field.type === 'checkbox') {
             return (
-              <label key={field.id} className="flex cursor-pointer items-center gap-2.5">
+              <label
+                key={field.id}
+                className="flex cursor-pointer items-center gap-2.5 [@media(pointer:coarse)]:min-h-11"
+              >
                 <input
                   type="checkbox"
                   checked={Boolean(answers[field.id])}
@@ -83,7 +104,7 @@ export default function FormFill() {
           }
 
           return (
-            <Field key={field.id} label={label}>
+            <Field key={field.id} label={field.label} required={field.required}>
               {field.type === 'textarea' ? (
                 <Textarea rows={4} value={value} onChange={(e) => set(field.id, e.target.value)} required={field.required} />
               ) : field.type === 'select' ? (

@@ -3,7 +3,7 @@ import { api } from '../api/client.js';
 import { Button, Input, Select, Textarea, Field, ErrorText } from './ui.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../lib/labels.js';
 import { STEP_CATALOG, TRIGGERS, catalogFor, defaultStepConfig, CONDITION_FIELDS } from '../lib/workflowBlocks.js';
-import { IconZap } from './icons.jsx';
+import { IconZap, IconX } from './icons.jsx';
 
 // Éditeur de workflow en canvas façon n8n : blocs déplaçables reliés par des
 // fils, pan et zoom. Un bloc « condition » a deux sorties (oui / non). Le graphe
@@ -466,10 +466,11 @@ function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, ou
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={onDelete}
-            className="hidden cursor-pointer text-xs text-ink-faint hover:text-accent group-hover:block"
+            className="cursor-pointer text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-accent"
+            aria-label={`Supprimer le bloc « ${title} »`}
             title="Supprimer"
           >
-            ✕
+            <IconX size={14} />
           </button>
         )}
       </div>

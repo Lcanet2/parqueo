@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSettings } from '../context/SettingsContext.jsx';
-import { Button, Input, Select, Textarea, Field, ErrorText } from '../components/ui.jsx';
+import { Button, Input, Select, Textarea, Field, ErrorText, PageHeader } from '../components/ui.jsx';
 import Combobox from '../components/Combobox.jsx';
 import { TICKET_PRIORITY } from '../lib/labels.js';
 
@@ -78,16 +78,17 @@ export default function TicketNew() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
-      <div>
-        <div className="mb-1 text-xs text-ink-faint">
-          <span>Nouvelle demande / Signaler un problème</span>
-        </div>
-        <h1 className="text-lg font-semibold tracking-tight">Signaler un problème</h1>
-      </div>
+    <div className="mx-auto max-w-form space-y-4">
+      <PageHeader
+        title="Signaler un problème"
+        trail={[
+          { to: '/tickets', label: 'Tickets' },
+          { to: '/tickets/nouveau', label: 'Nouvelle demande' },
+        ]}
+      />
 
       <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-line bg-surface p-5">
-        <Field label="Titre">
+        <Field label="Titre" required>
           <Input
             value={form.title}
             onChange={(e) => set('title', e.target.value)}
@@ -118,7 +119,7 @@ export default function TicketNew() {
           </div>
         )}
 
-        <Field label="Description">
+        <Field label="Description" required hint="Depuis quand, sur quel poste, ce que vous avez déjà essayé.">
           <Textarea
             value={form.description}
             onChange={(e) => set('description', e.target.value)}
@@ -129,7 +130,7 @@ export default function TicketNew() {
         </Field>
 
         <div className={`grid gap-3 ${canSetPriority ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <Field label="Catégorie">
+          <Field label="Catégorie" required>
             <Select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} required>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -163,7 +164,7 @@ export default function TicketNew() {
           <input
             type="file"
             onChange={(e) => setFile(e.target.files[0] ?? null)}
-            className="block w-full text-sm text-ink-soft file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-line file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink"
+            className="block w-full text-sm text-ink-soft file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-field file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-ink hover:file:bg-canvas"
           />
         </Field>
 
@@ -171,7 +172,7 @@ export default function TicketNew() {
 
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={() => navigate(-1)}>Annuler</Button>
-          <Button variant="primary" type="submit" disabled={busy}>
+          <Button variant="primary" type="submit" disabled={busy} aria-busy={busy}>
             {busy ? 'Création…' : 'Créer le ticket'}
           </Button>
         </div>

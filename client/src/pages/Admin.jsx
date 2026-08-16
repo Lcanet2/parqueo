@@ -11,7 +11,9 @@ import {
   ErrorText,
   ErrorState,
   EmptyState,
-  Spinner,
+  SearchInput,
+  PageHeader,
+  TableSkeleton,
 } from '../components/ui.jsx';
 import { parseCsv } from '../lib/csv.js';
 import FormsTab from '../components/FormsTab.jsx';
@@ -37,15 +39,32 @@ export default function Admin() {
     // d'une certaine largeur, ne fait qu'écarter ses colonnes. Il prend donc
     // tout le <main>, sans plafond.
     <div className={`mx-auto space-y-4 ${tab === 'workflows' ? 'max-w-none' : 'max-w-page'}`}>
-      <h1 className="text-lg font-semibold tracking-tight">Administration</h1>
+      <PageHeader title="Administration" />
 
-      <div className="flex gap-1 border-b border-line">
-        {TABS.map((t) => (
+      {/* Vrais onglets ARIA : les flèches gauche/droite passent d'un onglet à
+          l'autre et le panneau est rattaché à son onglet. Les cinq boutons
+          n'annonçaient jusqu'ici ni leur rôle, ni lequel était sélectionné. */}
+      <div role="tablist" aria-label="Sections d'administration" className="flex gap-1 overflow-x-auto border-b border-line">
+        {TABS.map((t, i) => (
           <button
             key={t.key}
+            id={`onglet-${t.key}`}
+            role="tab"
+            type="button"
+            aria-selected={tab === t.key}
+            aria-controls={`panneau-${t.key}`}
+            tabIndex={tab === t.key ? 0 : -1}
             onClick={() => setTab(t.key)}
+            onKeyDown={(e) => {
+              const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+              if (!step) return;
+              e.preventDefault();
+              const next = TABS[(i + step + TABS.length) % TABS.length];
+              setTab(next.key);
+              document.getElementById(`onglet-${next.key}`)?.focus();
+            }}
             className={[
-              'cursor-pointer border-b-2 px-3 py-2 text-sm transition-colors',
+              'cursor-pointer border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors [@media(pointer:coarse)]:min-h-11',
               tab === t.key
                 ? 'border-accent font-medium text-ink'
                 : 'border-transparent text-ink-soft hover:text-ink',
@@ -56,11 +75,15 @@ export default function Admin() {
         ))}
       </div>
 
-      {tab === 'users' && <UsersTab />}
-      {tab === 'teams' && <SimpleListTab endpoint="/teams" label="équipe" placeholder="Ex. : Support N2" />}
-      {tab === 'categories' && <SimpleListTab endpoint="/categories" label="catégorie" placeholder="Ex. : Réseau" />}
-      {tab === 'forms' && <FormsTab />}
-      {tab === 'workflows' && <WorkflowsTab />}
+      <div id={`panneau-${tab}`} role="tabpanel" aria-labelledby={`onglet-${tab}`} tabIndex={-1} className="focus:outline-none">
+        {tab === 'users' && <UsersTab />}
+        {tab === 'teams' && <SimpleListTab endpoint="/teams" label="équipe" placeholder="Ex. : Support N2" />}
+        {tab === 'categories' && (
+          <SimpleListTab endpoint="/categories" label="catégorie" placeholder="Ex. : Réseau" />
+        )}
+        {tab === 'forms' && <FormsTab />}
+        {tab === 'workflows' && <WorkflowsTab />}
+      </div>
     </div>
   );
 }
@@ -186,7 +209,7 @@ function UsersTab() {
   }
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
-  if (!users) return <Spinner />;
+  if (!users) return <TableSkeleton rows={6} columns={4} />;
 
   const columns = [
     { key: 'name', label: 'Nom', value: (u) => u.name, filter: 'text', tdClassName: 'font-medium' },
@@ -204,6 +227,7 @@ function UsersTab() {
       value: (u) => ROLE[u.role],
       render: (u) => (
         <Select
+          aria-label={`Rôle de ${u.name}`}
           value={u.role}
           disabled={u.id === me.id}
           onChange={(e) => patchUser(u.id, { role: e.target.value })}
@@ -223,6 +247,7 @@ function UsersTab() {
       tdClassName: 'hidden md:table-cell',
       render: (u) => (
         <Select
+          aria-label={`Équipe de ${u.name}`}
           value={u.teamId ?? ''}
           onChange={(e) => patchUser(u.id, { teamId: e.target.value ? Number(e.target.value) : null })}
           className="w-auto"
@@ -242,9 +267,15 @@ function UsersTab() {
       tdClassName: 'text-right',
       render: (u) => (
         <span className="flex justify-end gap-1">
-          <Button variant="ghost" onClick={() => openManage(u)}>Gérer</Button>
+          {/* Le nom de la personne est dans le libellé accessible : une liste de
+              vingt boutons « Gérer » identiques ne dit pas lequel fait quoi. */}
+          <Button variant="ghost" aria-label={`Gérer ${u.name}`} onClick={() => openManage(u)}>
+            Gérer
+          </Button>
           {u.id !== me.id && (
-            <Button variant="ghost" onClick={() => removeUser(u)}>Supprimer</Button>
+            <Button variant="ghost" aria-label={`Supprimer ${u.name}`} onClick={() => removeUser(u)}>
+              Supprimer
+            </Button>
           )}
         </span>
       ),
@@ -453,19 +484,35 @@ function SimpleListTab({ endpoint, label, placeholder }) {
   return (
     <Card title={`${label.charAt(0).toUpperCase() + label.slice(1)}s (${items?.length ?? 0})`}>
       <form onSubmit={create} className="flex max-w-xl gap-2 border-b border-line p-3">
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} required />
-        <Button variant="primary" type="submit">Ajouter</Button>
+        <Input
+          aria-label={`Nom de la nouvelle ${label}`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={placeholder}
+          required
+        />
+        <Button variant="primary" type="submit">
+          Ajouter
+        </Button>
       </form>
       {items && items.length > 0 && (
         <div className="border-b border-line p-3">
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Rechercher une ${label}…`} />
+          <SearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Rechercher une ${label}…`}
+          />
         </div>
       )}
       <ErrorText>{error}</ErrorText>
       {items === null ? (
-        <Spinner />
+        <TableSkeleton rows={4} columns={1} />
       ) : filtered.length === 0 ? (
-        <EmptyState>{search ? `Aucune ${label} ne correspond` : `Aucune ${label}`}</EmptyState>
+        <EmptyState title={search ? `Aucune ${label} ne correspond` : `Aucune ${label}`}>
+          {search
+            ? 'Essayez un autre mot-clé.'
+            : `Ajoutez la première ${label} avec le champ ci-dessus.`}
+        </EmptyState>
       ) : (
         <>
           <ul>
