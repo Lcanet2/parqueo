@@ -59,22 +59,36 @@ export default function WorkflowsTab() {
     }
   }
 
+  // L'API remplace le workflow entier : on renvoie ses blocs avec leur `key` et
+  // ses fils. Sans eux, le serveur refusait (« Bloc sans identifiant ») et le
+  // bouton n'avait aucun effet sur un workflow qui comptait au moins un bloc.
   async function toggleActive(wf) {
-    await api.put(`/workflows/${wf.id}`, {
-      name: wf.name,
-      trigger: wf.trigger,
-      active: !wf.active,
-      conditions: wf.conditions,
-      layout: wf.layout,
-      steps: wf.steps.map((s) => ({ type: s.type, config: s.config, x: s.x, y: s.y })),
-    });
-    load();
+    setError(null);
+    try {
+      await api.put(`/workflows/${wf.id}`, {
+        name: wf.name,
+        trigger: wf.trigger,
+        active: !wf.active,
+        conditions: wf.conditions,
+        layout: wf.layout,
+        edges: wf.edges ?? {},
+        steps: wf.steps.map((s) => ({ key: s.key, type: s.type, config: s.config, x: s.x, y: s.y })),
+      });
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function remove(wf) {
     if (!confirm(`Supprimer le workflow « ${wf.name} » ?`)) return;
-    await api.delete(`/workflows/${wf.id}`);
-    load();
+    setError(null);
+    try {
+      await api.delete(`/workflows/${wf.id}`);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;

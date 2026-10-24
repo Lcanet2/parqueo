@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { setPreference, watchSystemTheme } from '../lib/theme.js';
+import { setPreference, watchSystemTheme, watchOtherTabs, THEME_EVENT } from '../lib/theme.js';
 import { resolveTheme } from '../lib/theme.js';
 import { IconSun, IconMoon } from './icons.jsx';
 
@@ -16,12 +16,16 @@ function useTheme() {
     // Sans choix enregistré, l'OS peut basculer sous nos yeux : on garde
     // l'affichage en phase avec ce que voit réellement l'utilisateur.
     const stop = watchSystemTheme();
+    const stopTabs = watchOtherTabs();
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const suivre = () => set(resolveTheme());
     mq.addEventListener('change', suivre);
+    window.addEventListener(THEME_EVENT, suivre);
     return () => {
       stop();
+      stopTabs();
       mq.removeEventListener('change', suivre);
+      window.removeEventListener(THEME_EVENT, suivre);
     };
   }, []);
   return [

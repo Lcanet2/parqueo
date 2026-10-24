@@ -46,7 +46,10 @@ export function AuthProvider({ children }) {
           setLoading(false);
           return;
         } catch {
-          setToken(null);
+          // Le jeton n'est effacé que si l'API le refuse (401, traité dans
+          // api/client.js). Une API injoignable — redémarrage, mise à jour — ou
+          // une requête interrompue par un changement de page ne disent rien de
+          // la session : l'effacer ici déconnectait l'utilisateur à tort.
         }
       }
       try {

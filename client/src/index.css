@@ -97,7 +97,8 @@
   --color-status-new-bg: #e8eefc;
   --color-status-progress: #0c2a66;
   --color-status-progress-bg: #e3e8f2;
-  --color-status-waiting: #5f84d8; /* le trait ; le texte reste à l'encre */
+  --color-status-waiting: #5f84d8; /* le trait de la pastille, jamais du texte : 3.6:1 */
+  --color-status-waiting-ink: #2f4f9a; /* le texte « En attente » sur sa teinte : 7:1 */
   --color-status-waiting-bg: #eef2fb;
   --color-status-resolved: #247b50;
   --color-status-resolved-bg: #e2f5e9;
@@ -153,6 +154,7 @@
   --color-status-progress: #d5ddf2;
   --color-status-progress-bg: #262b36;
   --color-status-waiting: #4a6bc0;
+  --color-status-waiting-ink: #a3bcf8;
   --color-status-waiting-bg: #1b2030;
   --color-status-resolved: #5fc28d;
   --color-status-resolved-bg: #15291e;

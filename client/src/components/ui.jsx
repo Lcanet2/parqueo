@@ -86,7 +86,9 @@ export function Badge({ label, fg, bg, mark }) {
 }
 
 export function Button({ variant = 'default', className = '', ...props }) {
-  const base = `inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium transition-[background-color,border-color,color,scale] active:scale-[.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer ${TOUCH}`;
+  // `whitespace-nowrap` : un libellé de bouton ne se coupe pas (« Nouveau
+  // workflow » passait sur deux lignes à côté d'un paragraphe dans un en-tête).
+  const base = `inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-[background-color,border-color,color,scale] active:scale-[.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer ${TOUCH}`;
   const variants = {
     // L'action principale est quasi noire : le bleu de la marque est gardé pour
     // les données, un bouton bleu sur chaque écran l'aurait banalisé.

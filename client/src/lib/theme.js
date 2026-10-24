@@ -38,10 +38,28 @@ export function applyTheme(preference = getPreference()) {
   document.documentElement.dataset.theme = resolveTheme(preference);
 }
 
+// Prévient les autres sélecteurs de thème de la page (le bouton de la barre
+// latérale, les boutons de « Mon compte ») : chacun garde l'état affiché en
+// mémoire, et sans cet événement le bouton de la barre restait sur l'ancien
+// thème — son premier clic ne faisait alors rien.
+export const THEME_EVENT = 'parqueo:theme';
+
 export function setPreference(preference) {
   if (!THEMES.includes(preference)) return;
   localStorage.setItem(KEY, preference);
   applyTheme(preference);
+  window.dispatchEvent(new Event(THEME_EVENT));
+}
+
+// Un autre onglet a changé le thème : on l'applique ici aussi.
+export function watchOtherTabs() {
+  const onStorage = (e) => {
+    if (e.key !== KEY) return;
+    applyTheme();
+    window.dispatchEvent(new Event(THEME_EVENT));
+  };
+  window.addEventListener('storage', onStorage);
+  return () => window.removeEventListener('storage', onStorage);
 }
 
 // Tant que rien n'a été choisi, suivre l'OS pendant que la page est ouverte :

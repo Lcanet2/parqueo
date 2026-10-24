@@ -73,6 +73,11 @@ export default function KbArticle() {
       };
       if (isNew) {
         const created = await api.post('/kb', data);
+        // /aide/nouveau et /aide/:id rendent ce même composant : React le
+        // réutilise au changement d'URL, et `editing`, initialisé à la création,
+        // restait vrai — on retombait sur le formulaire au lieu de l'article.
+        setArticle(created);
+        setEditing(false);
         navigate(`/aide/${created.id}`, { replace: true });
       } else {
         const updated = await api.patch(`/kb/${id}`, data);
@@ -88,8 +93,13 @@ export default function KbArticle() {
 
   async function remove() {
     if (!window.confirm('Supprimer définitivement cet article ?')) return;
-    await api.delete(`/kb/${id}`);
-    navigate('/aide');
+    setError(null);
+    try {
+      await api.delete(`/kb/${id}`);
+      navigate('/aide');
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   if (notFound) {
@@ -192,6 +202,7 @@ export default function KbArticle() {
               )
             }
           />
+          <ErrorText>{error}</ErrorText>
           {/* `max-w-[68ch]` : au-delà, l'œil perd la ligne suivante en revenant
               à la marge. La carte, elle, garde toute la largeur. */}
           <article className="rounded-lg border border-line bg-surface px-5 py-4 text-sm whitespace-pre-wrap">

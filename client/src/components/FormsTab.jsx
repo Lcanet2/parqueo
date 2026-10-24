@@ -117,13 +117,23 @@ export default function FormsTab() {
 
   async function remove(form) {
     if (!confirm(`Supprimer le formulaire « ${form.name} » ?`)) return;
-    await api.delete(`/forms/${form.id}`);
-    load();
+    setError(null);
+    try {
+      await api.delete(`/forms/${form.id}`);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function toggleActive(form) {
-    await api.patch(`/forms/${form.id}`, { active: !form.active });
-    load();
+    setError(null);
+    try {
+      await api.patch(`/forms/${form.id}`, { active: !form.active });
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
@@ -268,6 +278,8 @@ export default function FormsTab() {
         </p>
         <Button variant="primary" onClick={() => setDraft(emptyForm())}>Nouveau formulaire</Button>
       </div>
+
+      <ErrorText>{error}</ErrorText>
 
       <Card title={`Formulaires (${forms.length})`}>
         {forms.length === 0 ? (

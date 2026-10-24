@@ -3,7 +3,9 @@
 export const TICKET_STATUS = {
   new: { label: 'Nouveau', fg: 'var(--color-status-new)', bg: 'var(--color-status-new-bg)', mark: 'filled' },
   in_progress: { label: 'En cours', fg: 'var(--color-status-progress)', bg: 'var(--color-status-progress-bg)', mark: 'filled' },
-  waiting: { label: 'En attente', fg: 'var(--color-status-waiting)', bg: 'var(--color-status-waiting-bg)', mark: 'parked' },
+  // `ink` : le bleu pâle du trait ne tient pas 4.5:1 en texte ; les badges
+  // textuels (journal du ticket) prennent cette encre à la place.
+  waiting: { label: 'En attente', fg: 'var(--color-status-waiting)', ink: 'var(--color-status-waiting-ink)', bg: 'var(--color-status-waiting-bg)', mark: 'parked' },
   resolved: { label: 'Résolu', fg: 'var(--color-status-resolved)', bg: 'var(--color-status-resolved-bg)', mark: 'filled' },
   closed: { label: 'Fermé', fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)', mark: 'filled' },
 };

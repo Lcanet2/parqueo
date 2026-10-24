@@ -30,7 +30,7 @@ function translateEvent(body) {
 }
 
 const ASSIGNEE_BADGE = { fg: 'var(--color-accent)', bg: 'var(--color-accent-soft)' };
-const TEAM_BADGE = { fg: 'var(--color-status-waiting)', bg: 'var(--color-status-waiting-bg)' };
+const TEAM_BADGE = { fg: 'var(--color-status-waiting-ink)', bg: 'var(--color-status-waiting-bg)' };
 const REMOVED_BADGE = { fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)' };
 
 // Découpe un événement brut en segments texte / badges colorés :
@@ -206,7 +206,7 @@ function EventLine({ body, createdAt }) {
             <span
               key={i}
               className="inline-flex items-center rounded px-1.5 py-px font-medium whitespace-nowrap"
-              style={{ color: seg.badge.fg, background: seg.badge.bg }}
+              style={{ color: seg.badge.ink ?? seg.badge.fg, background: seg.badge.bg }}
             >
               {seg.badge.label}
             </span>
