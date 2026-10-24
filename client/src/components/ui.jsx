@@ -11,15 +11,10 @@ import { IconInbox, IconSearch, IconAlert, IconChevronRight } from './icons.jsx'
 // l'interface dense passent à 44 px de haut. Sur souris, la densité est gardée.
 const TOUCH = '[@media(pointer:coarse)]:min-h-11';
 
-// Avatar à initiales, couleur stable par utilisateur (paires fond/texte des tokens statut).
-const AVATAR_COLORS = [
-  { bg: 'var(--color-status-new-bg)', fg: 'var(--color-status-new)' },
-  { bg: 'var(--color-status-progress-bg)', fg: 'var(--color-status-progress)' },
-  { bg: 'var(--color-status-waiting-bg)', fg: 'var(--color-status-waiting)' },
-  { bg: 'var(--color-status-resolved-bg)', fg: 'var(--color-status-resolved)' },
-  { bg: 'var(--color-accent-soft)', fg: 'var(--color-accent)' },
-  { bg: 'var(--color-status-closed-bg)', fg: 'var(--color-status-closed)' },
-];
+// Avatar à initiales, teinte stable par personne. Les teintes sont celles des
+// personnes, pas celles des états : six tons pâles espacés de 60° au moins, qui
+// n'apparaissent dans aucun graphique et ne peuvent pas passer pour un statut.
+const PERSON_HUES = [212, 152, 32, 352, 92, 272];
 
 // `avatar` est le nom de fichier renvoyé par l'API ; sans lui, on retombe sur
 // les initiales. L'image est chargée par une balise <img> ordinaire : son
@@ -34,8 +29,8 @@ export function Avatar({ name = '?', id = 0, avatar = null, size = 'md' }) {
     .slice(0, 2)
     .join('')
     .toUpperCase();
-  const color = AVATAR_COLORS[id % AVATAR_COLORS.length];
-  const sizes = { sm: 'h-6 w-6 text-[10px]', md: 'h-8 w-8 text-xs', lg: 'h-16 w-16 text-lg' };
+  const hue = PERSON_HUES[id % PERSON_HUES.length];
+  const sizes = { sm: 'h-6 w-6 text-[11px]', md: 'h-8 w-8 text-xs', lg: 'h-16 w-16 text-lg' };
   const base = `inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${sizes[size]}`;
 
   // Si le fichier a disparu — volume non restauré, sauvegarde partielle — le
@@ -57,16 +52,32 @@ export function Avatar({ name = '?', id = 0, avatar = null, size = 'md' }) {
   }
 
   return (
-    <span className={base} style={{ background: color.bg, color: color.fg }} aria-hidden="true">
+    <span
+      className={`${base} bg-[hsl(var(--h)_60%_92%)] text-[hsl(var(--h)_45%_28%)] dark:bg-[hsl(var(--h)_22%_22%)] dark:text-[hsl(var(--h)_60%_82%)]`}
+      style={{ '--h': hue }}
+      aria-hidden="true"
+    >
       {initials}
     </span>
   );
 }
 
-export function Badge({ label, fg, bg }) {
+// Deux formes. Une paire pâle (fond teinté, texte de la même teinte) pour les
+// priorités et les étiquettes. Et, quand `mark` est donné, la pastille d'état :
+// la panse du P à la couleur de l'état, le libellé à l'encre — une file de
+// cinquante tickets ne devient pas un mur de pastilles colorées.
+export function Badge({ label, fg, bg, mark }) {
+  if (mark) {
+    return (
+      <span className="inline-flex flex-none items-center gap-1.5 text-[13px] font-medium whitespace-nowrap text-ink">
+        <span className="status-mark" style={{ color: fg }} data-parked={mark === 'parked' ? '' : undefined} />
+        {label}
+      </span>
+    );
+  }
   return (
     <span
-      className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium whitespace-nowrap"
+      className="inline-flex flex-none items-center rounded px-1.5 py-0.5 text-xs font-medium whitespace-nowrap"
       style={{ color: fg, background: bg }}
     >
       {label}
@@ -75,12 +86,14 @@ export function Badge({ label, fg, bg }) {
 }
 
 export function Button({ variant = 'default', className = '', ...props }) {
-  const base = `inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${TOUCH}`;
+  const base = `inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium transition-[background-color,border-color,color,scale] active:scale-[.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer ${TOUCH}`;
   const variants = {
-    primary: 'bg-accent text-on-accent hover:bg-accent-strong',
+    // L'action principale est quasi noire : le bleu de la marque est gardé pour
+    // les données, un bouton bleu sur chaque écran l'aurait banalisé.
+    primary: 'bg-primary text-on-primary hover:bg-primary-strong',
     default: 'border border-line bg-surface text-ink hover:bg-canvas hover:border-field',
     ghost: 'text-ink-soft hover:bg-canvas hover:text-ink',
-    danger: 'border border-line bg-surface text-accent hover:bg-accent-soft hover:border-accent',
+    danger: 'border border-line bg-surface text-negative hover:bg-negative-soft hover:border-negative',
   };
   return <button className={`${base} ${variants[variant]} ${className}`} {...props} />;
 }
@@ -90,8 +103,8 @@ export function Button({ variant = 'default', className = '', ...props }) {
 export function IconButton({ label, children, variant = 'ghost', className = '', ...props }) {
   const variants = {
     ghost: 'text-ink-soft hover:bg-canvas hover:text-ink',
-    danger: 'text-ink-soft hover:bg-accent-soft hover:text-accent',
-    active: 'bg-accent-soft text-accent',
+    danger: 'text-ink-soft hover:bg-negative-soft hover:text-negative',
+    active: 'bg-active text-ink',
   };
   return (
     <button
@@ -112,7 +125,7 @@ export function IconButton({ label, children, variant = 'ghost', className = '',
 // utilitaires du même groupe, celui qui gagne est le dernier écrit dans la
 // feuille compilée, pas le dernier de la chaîne de classes — une base contenant
 // `w-full` écrasait donc le `w-auto` des menus de filtre.
-const CONTROL = `rounded-md border border-field bg-surface text-sm text-ink placeholder:text-ink-faint aria-invalid:border-accent ${TOUCH}`;
+const CONTROL = `rounded-md border border-field bg-surface text-sm text-ink placeholder:text-ink-faint aria-invalid:border-negative ${TOUCH}`;
 
 export function Input({ className = '', ...props }) {
   return <input {...props} className={`${CONTROL} w-full px-3 py-1.5 ${className}`} />;
@@ -168,10 +181,10 @@ export function Field({ label, hint, error, required = false, children }) {
 
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-ink-soft">
+      <span className="mb-1.5 block text-[13px] font-medium text-ink-soft">
         {label}
         {required && (
-          <span className="text-accent" title="Champ obligatoire">
+          <span className="text-negative" title="Champ obligatoire">
             {' '}
             *
           </span>
@@ -184,7 +197,7 @@ export function Field({ label, hint, error, required = false, children }) {
       )}
       {control}
       {error && (
-        <span id={errorId} role="alert" className="mt-1 block text-xs text-accent">
+        <span id={errorId} role="alert" className="mt-1 block text-xs text-negative">
           {error}
         </span>
       )}
@@ -197,11 +210,11 @@ export function Field({ label, hint, error, required = false, children }) {
 // laisser un vide en bas. Sans hauteur imposée, le rendu est inchangé.
 export function Card({ title, subtitle, action, children, className = '' }) {
   return (
-    <section className={`flex flex-col rounded-lg border border-line bg-surface ${className}`}>
+    <section className={`flex flex-col rounded-xl border border-line bg-surface ${className}`}>
       {(title || action) && (
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+        <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-3.5 pb-1.5">
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold">{title}</h2>
+            <h2 className="truncate text-[15px] font-semibold">{title}</h2>
             {subtitle && <p className="truncate text-xs text-ink-faint">{subtitle}</p>}
           </div>
           {action}
@@ -224,7 +237,7 @@ export function PageHeader({ title, trail = [], description, actions }) {
             {trail.map((step, i) => (
               <span key={step.label} className="flex items-center gap-1">
                 {step.to ? (
-                  <Link to={step.to} className="rounded-sm hover:text-accent">
+                  <Link to={step.to} className="rounded-sm hover:text-ink">
                     {step.label}
                   </Link>
                 ) : (
@@ -237,7 +250,7 @@ export function PageHeader({ title, trail = [], description, actions }) {
             ))}
           </nav>
         )}
-        <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-[22px] leading-tight font-bold tracking-[-0.015em]">{title}</h1>
         {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -265,7 +278,7 @@ export function EmptyState({ icon: Glyph = IconInbox, title, children, action })
 export function ErrorText({ children }) {
   if (!children) return null;
   return (
-    <p role="alert" className="text-sm text-accent">
+    <p role="alert" className="text-sm text-negative">
       {children}
     </p>
   );
@@ -276,7 +289,7 @@ export function ErrorText({ children }) {
 export function ErrorState({ error, onRetry }) {
   return (
     <div role="alert" className="flex flex-col items-center px-4 py-10 text-center">
-      <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent">
+      <span className="mb-3 flex h-10 w-10 items-center justify-center text-negative">
         <IconAlert size={20} />
       </span>
       <p className="text-sm font-medium text-ink">Le chargement a échoué</p>

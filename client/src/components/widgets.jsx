@@ -4,14 +4,17 @@ import TicketTable from './TicketTable.jsx';
 import { METRICS } from '../lib/dashboard.js';
 import { TICKET_STATUS, TICKET_PRIORITY, ASSET_TYPE, ASSET_STATUS, formatDate } from '../lib/labels.js';
 
-// Tokens (thème clair/sombre) plutôt que hex figés — cohérent avec le reste des
-// graphiques : « créés » en bleu (statut nouveau), « clôturés » en vert (résolu).
-const SERIES = { created: 'var(--color-status-new)', closed: 'var(--color-status-resolved)' };
+// Tokens (thème clair/sombre) plutôt que hex figés. Une seule teinte par
+// graphique : « créés », la série qui demande du travail, porte le bleu panneau ;
+// « clôturés » est la comparaison, en gris.
+const SERIES = { created: 'var(--color-accent)', closed: 'var(--color-status-closed)' };
 
 // ---------- Briques graphiques partagées ----------
 
-// Liste de barres horizontales : libellé, barre fine, compteur.
-function BarList({ rows, color = 'var(--color-status-new)', emptyText = 'Aucune donnée' }) {
+// Liste de barres horizontales : libellé, barre fine, compteur. Les barres sont
+// à l'encre douce par défaut : six listes bleues sur un même écran noyaient la
+// donnée principale. Une couleur n'est passée que quand elle a un sens.
+function BarList({ rows, color = 'var(--color-ink-soft)', emptyText = 'Aucune donnée' }) {
   const max = Math.max(...rows.map((r) => r.count), 0);
   if (max === 0) return <EmptyState>{emptyText}</EmptyState>;
   return (
@@ -19,9 +22,9 @@ function BarList({ rows, color = 'var(--color-status-new)', emptyText = 'Aucune 
       {rows.map((r) => (
         <li key={r.label} className="flex items-center gap-3" title={`${r.label} : ${r.count}`}>
           <span className="w-28 shrink-0 truncate text-xs text-ink-soft">{r.label}</span>
-          <span className="h-2 flex-1 rounded-[2px] bg-canvas">
+          <span className="h-1.5 flex-1 rounded-full bg-rule">
             <span
-              className="block h-2 rounded-[2px]"
+              className="block h-1.5 rounded-full"
               style={{ width: `${(r.count / max) * 100}%`, background: r.color ?? color }}
             />
           </span>
@@ -47,7 +50,13 @@ function SegmentedBar({ items, total, linkFor }) {
             <div
               key={i.key}
               title={`${i.label} : ${i.count}`}
-              style={{ background: i.fg, flexGrow: i.count }}
+              // Le segment « en attente » est creux, comme sa pastille : ces
+              // tickets sont parqués sur un bloc d'attente du workflow.
+              style={
+                i.mark === 'parked'
+                  ? { boxShadow: `inset 0 0 0 1.5px ${i.fg}`, flexGrow: i.count }
+                  : { background: i.fg, flexGrow: i.count }
+              }
               className="min-w-1 rounded-[2px]"
             />
           ))}
@@ -56,7 +65,11 @@ function SegmentedBar({ items, total, linkFor }) {
         {items.map((i) => {
           const inner = (
             <>
-              <span className="h-2 w-2 rounded-[2px]" style={{ background: i.fg }} />
+              {i.mark ? (
+                <span className="status-mark" style={{ color: i.fg }} data-parked={i.mark === 'parked' ? '' : undefined} />
+              ) : (
+                <span className="h-2 w-2 rounded-[2px]" style={{ background: i.fg }} />
+              )}
               {i.label}
               <span className="tabular-nums text-ink-faint">{i.count}</span>
             </>
@@ -84,39 +97,57 @@ function WeeklyColumns({ series, semaines }) {
     label: new Date(sem.debut).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
     values: series.map((s) => sem[s.cle] ?? 0),
   }));
-  const max = Math.max(1, ...buckets.flatMap((b) => b.values));
+  // Échelle ronde au-dessus du maximum (0 / 5 / 10, 0 / 10 / 20…) : sans elle,
+  // la hauteur d'une colonne ne se lisait qu'au survol.
+  const peak = Math.max(1, ...buckets.flatMap((b) => b.values));
+  const step = [1, 2, 5, 10, 20, 50, 100, 200, 500].find((st) => st * 2 >= peak) ?? Math.ceil(peak / 2);
+  const max = step * 2;
+  const ticks = [max, step, 0];
   const weeks = buckets.length;
 
   return (
-    <div className="flex h-full flex-col px-4 py-3">
-      <div className="mb-2 flex shrink-0 flex-wrap gap-x-4 gap-y-1">
-        {series.map((s) => (
-          <span key={s.label} className="flex items-center gap-1.5 text-xs text-ink-soft">
-            <span className="h-2 w-2 rounded-[2px]" style={{ background: s.color }} />
-            {s.label}
-          </span>
-        ))}
+    <div className="flex h-full flex-col px-4 pt-1 pb-3">
+      {series.length > 1 && (
+        <div className="mb-2 flex shrink-0 flex-wrap gap-x-4 gap-y-1">
+          {series.map((s) => (
+            <span key={s.label} className="flex items-center gap-1.5 text-xs text-ink-soft">
+              <span className="h-2 w-2 rounded-[2px]" style={{ background: s.color }} />
+              {s.label}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex min-h-28 flex-1 gap-2">
+        <div className="flex w-5 shrink-0 flex-col justify-between pb-px text-right text-[11px] leading-none text-ink-faint" aria-hidden="true">
+          {ticks.map((t) => (
+            <span key={t} className="-translate-y-1/2 last:translate-y-1/2">
+              {t}
+            </span>
+          ))}
+        </div>
+        <div className="relative flex flex-1 items-end gap-1 border-b border-field/60 pb-px">
+          <span className="pointer-events-none absolute inset-x-0 top-0 border-t border-rule" aria-hidden="true" />
+          <span className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-rule" aria-hidden="true" />
+          {buckets.map((b) => (
+            <div
+              key={b.label}
+              className="relative flex h-full flex-1 items-end justify-center gap-0.5"
+              title={`Semaine du ${b.label} — ${series.map((s, i) => `${s.label} : ${b.values[i]}`).join(', ')}`}
+            >
+              {b.values.map((v, i) => (
+                <div
+                  key={i}
+                  className="w-full max-w-3 rounded-t-[2px]"
+                  style={{ height: `${(v / max) * 100}%`, background: series[i].color, minHeight: v > 0 ? 3 : 0 }}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="flex min-h-28 flex-1 items-end gap-1 border-b border-line pb-px">
-        {buckets.map((b) => (
-          <div
-            key={b.label}
-            className="flex h-full flex-1 items-end justify-center gap-0.5"
-            title={`Semaine du ${b.label} — ${series.map((s, i) => `${s.label} : ${b.values[i]}`).join(', ')}`}
-          >
-            {b.values.map((v, i) => (
-              <div
-                key={i}
-                className="w-full max-w-3 rounded-t-[3px]"
-                style={{ height: `${(v / max) * 100}%`, background: series[i].color, minHeight: v > 0 ? 3 : 0 }}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="mt-1 flex gap-1">
+      <div className="mt-1 flex gap-1 pl-7">
         {buckets.map((b, i) => (
-          <div key={b.label} className="flex-1 text-center text-[10px] text-ink-faint">
+          <div key={b.label} className="flex-1 text-center text-[11px] text-ink-faint">
             {weeks > 8 && i % 2 === 1 ? '' : b.label}
           </div>
         ))}
@@ -163,7 +194,7 @@ function DonutChart({ items, total, centerLabel }) {
           <text x="60" y="57" textAnchor="middle" className="fill-(--color-ink) text-xl font-semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
             {total}
           </text>
-          <text x="60" y="73" textAnchor="middle" className="fill-(--color-ink-faint) text-[10px]">
+          <text x="60" y="73" textAnchor="middle" className="fill-(--color-ink-faint) text-[11px]">
             {centerLabel}
           </text>
         </g>
@@ -185,13 +216,15 @@ function DonutChart({ items, total, centerLabel }) {
 }
 
 // Palette catégorielle (ordre fixe) pour les données sans couleur sémantique.
+// Une rampe de bleus puis des gris : au-delà de trois parts, la couleur ne
+// porte plus de sens, la légende-tableau à côté donne les valeurs.
 const CATEGORICAL = [
-  'var(--color-status-new)',
+  'var(--color-accent)',
   'var(--color-status-progress)',
   'var(--color-status-waiting)',
-  'var(--color-status-resolved)',
-  'var(--color-accent)',
-  'var(--color-status-closed)',
+  'var(--color-ink-faint)',
+  'var(--color-field)',
+  'var(--color-line)',
 ];
 
 // ---------- Widgets ----------
@@ -202,11 +235,13 @@ function StatWidget({ data, config }) {
   const accent = metric.accent && value > 0;
   return (
     <Link to={metric.to} className="block h-full">
-      <div className="flex h-full flex-col justify-center rounded-lg border border-line bg-surface px-4 py-3 transition-colors hover:border-ink-faint">
-        <div className="text-xs font-medium text-ink-soft">{metric.label}</div>
+      <div className="flex h-full flex-col justify-center rounded-xl border border-line bg-surface px-4 py-3 transition-colors hover:border-field">
+        <div className="text-[13px] text-ink-soft">{metric.label}</div>
+        {/* Le chiffre d'alerte (priorité haute ouverte) passe au rouge : c'est
+            un signal, pas la couleur de la marque. */}
         <div
-          className="mt-1 text-2xl font-semibold tabular-nums tracking-tight"
-          style={accent ? { color: 'var(--color-accent)' } : undefined}
+          className="mt-0.5 text-[26px] leading-tight font-medium tabular-nums tracking-[-0.01em]"
+          style={accent ? { color: 'var(--color-negative)' } : undefined}
         >
           {value}
         </div>
@@ -220,6 +255,7 @@ function StatusBarWidget({ data }) {
     key,
     label: s.label,
     fg: s.fg,
+    mark: s.mark,
     count: data.stats.parStatut[key] ?? 0,
   }));
   return (

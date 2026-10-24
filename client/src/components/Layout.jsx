@@ -18,13 +18,15 @@ import {
 
 // NavLink pose lui-même `aria-current="page"` sur le lien actif : l'état actif
 // n'est donc pas porté par la seule couleur d'accent.
+// Ligne active : une pastille grise, le libellé à l'encre. Le bleu de la marque
+// reste aux données — une barre latérale colorée tirait l'œil hors du travail.
 function navClass({ isActive }) {
   return [
-    'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors whitespace-nowrap',
+    'flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors whitespace-nowrap',
     '[@media(pointer:coarse)]:min-h-11',
     isActive
-      ? 'bg-accent-soft font-medium text-accent'
-      : 'text-ink-soft hover:bg-canvas hover:text-ink',
+      ? 'bg-active font-medium text-ink'
+      : 'text-ink-soft hover:bg-active/60 hover:text-ink',
   ].join(' ');
 }
 
@@ -65,7 +67,10 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen md:flex">
+    // Le cadre (barre latérale, teinté) et la feuille (la page, blanche) : une
+    // seule marche de ton les sépare, sans filet ni ombre. Sur téléphone le
+    // cadre disparaît et la feuille devient l'écran.
+    <div className="min-h-screen bg-frame md:flex">
       {/* Lien d'évitement : au clavier, la première tabulation d'une page permet
           de sauter les huit liens de navigation répétés sur chaque écran. Il
           n'apparaît qu'une fois focalisé. */}
@@ -77,23 +82,23 @@ export default function Layout() {
       </a>
 
       {/* Sidebar desktop */}
-      <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-surface px-3 py-4 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
+      <aside className="hidden w-57 shrink-0 flex-col px-3 pt-4 pb-3 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
         {/* La marque était à 15 px, soit moins que les libellés de navigation
             juste en dessous : elle passait pour une ligne de menu parmi les
             autres. 22 px la remettent au rang d'en-tête. */}
-        <div className="mb-6 flex items-center justify-between gap-2 px-3">
-          <Link to="/" className="min-w-0 text-[22px] leading-none">
+        <div className="mb-7 flex items-center justify-between gap-2 pr-1 pl-2.5">
+          <Link to="/" className="min-w-0 text-[23px] leading-none">
             <Brand />
           </Link>
           <ThemeToggle />
         </div>
         {nav}
-        <div className="border-t border-line pt-3">
-          <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
+        <div className="pt-3">
+          <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
             <Link
               to="/compte"
               title="Mon compte"
-              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md transition-colors hover:text-accent"
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md transition-colors hover:text-ink-soft"
             >
               <Avatar name={user.name} id={user.id} avatar={user.avatar} />
               <span className="min-w-0 flex-1">
@@ -109,8 +114,8 @@ export default function Layout() {
       </aside>
 
       {/* Header mobile */}
-      <header className="sticky top-0 z-10 border-b border-line bg-surface md:hidden">
-        <div className="flex items-center justify-between px-4 py-2.5">
+      <header className="sticky top-0 z-10 bg-frame md:hidden">
+        <div className="flex h-12 items-center justify-between px-4">
           <Link to="/" className="text-[19px] leading-none">
             <Brand />
           </Link>
@@ -136,7 +141,11 @@ export default function Layout() {
 
       {/* `tabIndex={-1}` : sans lui, le lien d'évitement déplacerait le défilement
           sans déplacer le focus clavier, qui repartirait du haut de la page. */}
-      <main id="contenu" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 focus:outline-none md:px-8 md:py-6">
+      <main
+        id="contenu"
+        tabIndex={-1}
+        className="min-w-0 flex-1 bg-surface px-4 py-5 focus:outline-none md:my-2 md:mr-2 md:min-h-[calc(100vh-1rem)] md:rounded-(--radius-sheet) md:border md:border-line md:px-8 md:py-7"
+      >
         <Outlet />
       </main>
     </div>

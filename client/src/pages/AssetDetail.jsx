@@ -170,7 +170,7 @@ export default function AssetDetail() {
                   <span
                     className={
                       isStaleAsset(asset, settings?.assetStaleDays ?? 0)
-                        ? 'flex items-center gap-1 text-accent'
+                        ? 'flex items-center gap-1 text-negative'
                         : undefined
                     }
                   >

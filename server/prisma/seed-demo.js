@@ -146,6 +146,85 @@ async function main() {
   await ensureRouting('Imprimantes', teams['Support IT'].id);
   await ensureRouting('Accès & comptes', teams['Support N2'].id, techs[2].id);
 
+  // --- La procédure « incident réseau » de la documentation (§ 11.4) ---
+  // Le seul workflow de démonstration qui montre un bloc d'attente et une
+  // condition : c'est lui que montrent la capture de l'éditeur, dans la
+  // documentation comme sur parqueo.fr.
+  const incidentName = 'Incident réseau — prise en charge';
+  if (!(await prisma.workflow.findFirst({ where: { name: incidentName } }))) {
+    const last = await prisma.workflow.findFirst({ orderBy: { position: 'desc' } });
+    const row = { y: 150 };
+    const steps = [
+      { key: 'equipe', type: 'assign_team', config: { teamId: teams['Infrastructure'].id }, x: 235, ...row },
+      { key: 'accuse', type: 'send_email', config: { to: 'author', subject: '', body: 'Votre demande {{ticket.id}} est prise en compte par le support réseau.' }, x: 470, ...row },
+      { key: 'attente', type: 'wait_assigned', config: {}, x: 705, ...row },
+      { key: 'urgence', type: 'condition', config: { field: 'priority', value: 'high' }, x: 940, ...row },
+      { key: 'astreinte', type: 'send_email', config: { to: 'custom', email: 'astreinte@entreprise.fr', subject: 'Incident réseau urgent : {{ticket.title}}', body: '{{ticket.description}}' }, x: 1200, y: 40 },
+      { key: 'standard', type: 'add_note', config: { body: 'Traitement standard.' }, x: 1200, y: 270 },
+    ];
+    await prisma.workflow.create({
+      data: {
+        name: incidentName,
+        trigger: 'ticket_created',
+        conditions: { categoryId: categories['Réseau'].id },
+        position: (last?.position ?? 0) + 1,
+        layout: { trigger: { x: 0, y: 150 } },
+        edges: {
+          trigger: 'equipe',
+          equipe: 'accuse',
+          accuse: 'attente',
+          attente: 'urgence',
+          urgence: { yes: 'astreinte', no: 'standard' },
+        },
+        steps: { create: steps.map((s, i) => ({ ...s, position: i })) },
+      },
+    });
+  }
+
+  // --- Catalogue de demandes ---
+  const ensureForm = async (name, description, categoryName, priority, fields) => {
+    if (await prisma.form.findFirst({ where: { name } })) return;
+    await prisma.form.create({
+      data: {
+        name,
+        description,
+        categoryId: categories[categoryName].id,
+        priority,
+        fields: {
+          create: fields.map((f, i) => ({
+            label: f.label,
+            type: f.type,
+            required: Boolean(f.required),
+            options: f.options ? JSON.stringify(f.options) : null,
+            position: i,
+          })),
+        },
+      },
+    });
+  };
+  await ensureForm('Arrivée d’un collaborateur', 'Préparer poste, comptes et accès avant le premier jour.', 'Accès & comptes', 'medium', [
+    { label: 'Nom du collaborateur', type: 'text', required: true },
+    { label: "Date d'arrivée", type: 'date', required: true },
+    { label: 'Poste de travail', type: 'select', required: true, options: ['Portable', 'Fixe', 'Aucun'] },
+    { label: 'Accès particuliers', type: 'textarea' },
+  ]);
+  await ensureForm('Demande de matériel', 'Commander un poste, un écran, un casque ou un périphérique.', 'Matériel', 'low', [
+    { label: 'Matériel souhaité', type: 'select', required: true, options: ['Écran', 'Casque', 'Clavier et souris', 'Station d’accueil', 'Autre'] },
+    { label: 'Pour qui', type: 'text' },
+    { label: 'Justification', type: 'textarea' },
+  ]);
+  await ensureForm('Demande d’accès à une application', 'Ouvrir un accès à un logiciel métier pour un collaborateur.', 'Accès & comptes', 'medium', [
+    { label: 'Application', type: 'select', required: true, options: ['Sage Compta', 'CRM', 'Partage réseau', 'Autre'] },
+    { label: 'Collaborateur concerné', type: 'text', required: true },
+    { label: 'Niveau d’accès', type: 'select', required: true, options: ['Lecture', 'Modification', 'Administration'] },
+    { label: 'Validé par le responsable', type: 'checkbox' },
+  ]);
+  await ensureForm('Départ d’un collaborateur', 'Clôturer les accès et récupérer le matériel.', 'Accès & comptes', 'medium', [
+    { label: 'Nom du collaborateur', type: 'text', required: true },
+    { label: 'Dernier jour', type: 'date', required: true },
+    { label: 'Matériel à récupérer', type: 'textarea' },
+  ]);
+
   // --- Tickets ---
   const scenarios = [
     { t: 'PC très lent au démarrage', d: 'Le poste met plus de 10 minutes à démarrer depuis quelques jours. Rien changé côté logiciels.', cat: 'Matériel', asset: 'pc' },

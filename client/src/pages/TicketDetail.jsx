@@ -100,7 +100,7 @@ function AuthImage({ src, alt, className, onLoaded }) {
 function RoleTag({ isRequester }) {
   return (
     <span
-      className={`rounded px-1.5 py-px text-[10px] font-medium uppercase tracking-wide ${
+      className={`rounded px-1.5 py-px text-xs font-medium ${
         isRequester ? 'bg-canvas text-ink-soft' : 'bg-accent-soft text-accent'
       }`}
     >

@@ -1,15 +1,19 @@
+// `mark` : la pastille d'état (voir Badge). « En attente » est parqué : sa
+// pastille est creuse, le ticket attend sur un bloc du workflow.
 export const TICKET_STATUS = {
-  new: { label: 'Nouveau', fg: 'var(--color-status-new)', bg: 'var(--color-status-new-bg)' },
-  in_progress: { label: 'En cours', fg: 'var(--color-status-progress)', bg: 'var(--color-status-progress-bg)' },
-  waiting: { label: 'En attente', fg: 'var(--color-status-waiting)', bg: 'var(--color-status-waiting-bg)' },
-  resolved: { label: 'Résolu', fg: 'var(--color-status-resolved)', bg: 'var(--color-status-resolved-bg)' },
-  closed: { label: 'Fermé', fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)' },
+  new: { label: 'Nouveau', fg: 'var(--color-status-new)', bg: 'var(--color-status-new-bg)', mark: 'filled' },
+  in_progress: { label: 'En cours', fg: 'var(--color-status-progress)', bg: 'var(--color-status-progress-bg)', mark: 'filled' },
+  waiting: { label: 'En attente', fg: 'var(--color-status-waiting)', bg: 'var(--color-status-waiting-bg)', mark: 'parked' },
+  resolved: { label: 'Résolu', fg: 'var(--color-status-resolved)', bg: 'var(--color-status-resolved-bg)', mark: 'filled' },
+  closed: { label: 'Fermé', fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)', mark: 'filled' },
 };
 
+// La priorité haute porte le signal négatif, pas la couleur de la marque : c'est
+// une alerte, pas une sélection.
 export const TICKET_PRIORITY = {
   low: { label: 'Basse', fg: 'var(--color-ink-soft)', bg: 'var(--color-status-closed-bg)' },
-  medium: { label: 'Moyenne', fg: 'var(--color-status-progress)', bg: 'var(--color-status-progress-bg)' },
-  high: { label: 'Haute', fg: 'var(--color-accent)', bg: 'var(--color-accent-soft)' },
+  medium: { label: 'Moyenne', fg: 'var(--color-warning)', bg: 'var(--color-warning-soft)' },
+  high: { label: 'Haute', fg: 'var(--color-negative-ink)', bg: 'var(--color-negative-soft)' },
 };
 
 export const ASSET_TYPE = {
@@ -20,9 +24,9 @@ export const ASSET_TYPE = {
 };
 
 export const ASSET_STATUS = {
-  in_service: { label: 'En service', fg: 'var(--color-status-resolved)', bg: 'var(--color-status-resolved-bg)' },
-  in_repair: { label: 'En réparation', fg: 'var(--color-status-progress)', bg: 'var(--color-status-progress-bg)' },
-  retired: { label: 'Retiré', fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)' },
+  in_service: { label: 'En service', fg: 'var(--color-status-resolved)', bg: 'var(--color-status-resolved-bg)', mark: 'filled' },
+  in_repair: { label: 'En réparation', fg: 'var(--color-warning)', bg: 'var(--color-warning-soft)', mark: 'filled' },
+  retired: { label: 'Retiré', fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)', mark: 'filled' },
 };
 
 export const ROLE = {
@@ -35,8 +39,8 @@ export const ROLE = {
 export const ASSET_SOURCE = {
   manual: { label: 'Manuel', fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)' },
   agent: { label: 'Agent', fg: 'var(--color-status-new)', bg: 'var(--color-status-new-bg)' },
-  intune: { label: 'Intune', fg: 'var(--color-status-waiting)', bg: 'var(--color-status-waiting-bg)' },
-  scan: { label: 'Scan réseau', fg: 'var(--color-status-progress)', bg: 'var(--color-status-progress-bg)' },
+  intune: { label: 'Intune', fg: 'var(--color-status-progress)', bg: 'var(--color-status-progress-bg)' },
+  scan: { label: 'Scan réseau', fg: 'var(--color-warning)', bg: 'var(--color-warning-soft)' },
 };
 
 export function formatDate(iso) {

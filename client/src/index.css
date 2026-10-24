@@ -1,5 +1,28 @@
-@import '@fontsource-variable/inter';
 @import 'tailwindcss';
+
+/* Overpass, servie depuis l'application (aucune requête vers un CDN, comme
+   pour le reste de Parqueo). Licence OFL : assets/fonts/OFL-Overpass.txt.
+   Le point médian U+00B7 est retiré de la plage : Overpass le dessine pour le
+   « l·l » catalan, sans approche à droite, et il se collait au mot suivant
+   (« Réseau ·ouvert »). Il retombe sur la police système. */
+@font-face {
+  font-family: 'Overpass Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/overpass-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00B6, U+00B8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Overpass Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/overpass-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 /* La variante `dark:` suit l'attribut posé sur <html>, pas `prefers-color-scheme`.
    C'est ce qui permet de forcer le thème clair sur une machine réglée en sombre :
@@ -8,7 +31,11 @@
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme {
-  --font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  /* Overpass descend de la signalisation routière (Highway Gothic) : le monde
+     du panneau « P » dont Parqueo tire son nom. Elle a de vrais chiffres
+     tabulaires — indispensables dans une file de tickets et un inventaire, où
+     les numéros, compteurs et dates doivent s'aligner chiffre sous chiffre. */
+  --font-sans: 'Overpass Variable', system-ui, -apple-system, sans-serif;
 
   /* Largeurs de page.
      Les écrans denses (tableaux, grilles de widgets, inventaire) prennent
@@ -21,51 +48,73 @@
   --container-lecture: 48rem; /* 768 px — article, réglages, détail d'un actif */
   --container-form: 36rem; /* 576 px — formulaire de saisie */
 
-  /* Palette sobre inspirée n8n, version claire.
-     Les valeurs sont choisies pour tenir le contraste AA (4.5:1) sur les DEUX
-     fonds de l'application — `surface` (blanc) et `canvas` — et non sur le seul
-     blanc : un texte secondaire posé sur une ligne survolée reste lisible. */
-  --color-canvas: #f7f7f8;
-  --color-surface: #ffffff;
-  --color-line: #e4e4e7; /* séparateurs et bordures de cartes (décor) */
-  --color-field: #8f8f99; /* bordure des contrôles : 3.2:1, la limite du champ se voit */
-  --color-ink: #1c1c21; /* 17.0:1 */
-  --color-ink-soft: #6b6b76; /* 5.3:1 sur surface, 4.9:1 sur canvas */
-  --color-ink-faint: #71717a; /* 4.8:1 sur surface, 4.5:1 sur canvas */
+  /* --- Cadre et feuille -----------------------------------------------------
+     L'interface est un cadre teinté (barre latérale) sur lequel la page est
+     posée comme une feuille blanche. La teinte du cadre est un gris tiré du
+     bleu du panneau de stationnement : une seule marche de ton sépare le
+     cadre de la feuille, sans ombre.
+     Les valeurs tiennent le contraste AA (4.5:1) sur les TROIS fonds où du
+     texte peut se poser : `surface` (la feuille), `canvas` (lignes survolées,
+     puits) et `frame` (la barre latérale). */
+  --color-frame: #eef1f6;
+  --color-canvas: #f5f7fa; /* survol, puits, bulles du demandeur */
+  --color-surface: #ffffff; /* la feuille et les cartes */
+  --color-active: #e2e6ee; /* l'élément de navigation courant : un gris, pas l'accent */
+  --color-line: #e3e6ec; /* bord des cartes et de la feuille */
+  --color-rule: #eef0f4; /* filets entre les lignes d'un tableau */
+  --color-field: #8a909c; /* bordure des contrôles : 3.2:1, la limite du champ se voit */
+  --color-ink: #0f1115; /* 18.9:1 */
+  --color-ink-soft: #555b68; /* 6.0:1 sur le cadre */
+  --color-ink-faint: #646a77; /* 5.4:1 sur la feuille, 4.8:1 sur le cadre */
 
-  /* Accent unique, utilisé avec parcimonie.
-     #c6364f plutôt que le #d9435f d'origine : même teinte, mais 5.2:1 — le
-     libellé blanc d'un bouton primaire et les liens d'accent passent AA. */
-  --color-accent: #c6364f;
-  --color-accent-strong: #a92742;
-  --color-accent-soft: #fdf0f2;
-  /* Texte posé sur un aplat d'accent. En clair c'est du blanc ; en sombre
-     l'accent s'éclaircit, et c'est l'encre sombre qui repasse dessus. Un
-     `text-white` en dur ne survit pas à l'inversion. */
+  /* Action principale : quasi noire. Le bleu ne sert pas à décorer les
+     boutons ; il est réservé aux données et à la marque. */
+  --color-primary: #14171c;
+  --color-primary-strong: #000000;
+  --color-on-primary: #ffffff;
+
+  /* Bleu « panneau » — le bleu du P de stationnement. Il marque le logo, la
+     donnée principale de chaque écran, le filtre et l'onglet sélectionnés.
+     Rien d'autre. 7.4:1 sur la feuille. */
+  --color-accent: #1a4bc4;
+  --color-accent-strong: #123a9e;
+  --color-accent-soft: #e8eefc;
   --color-on-accent: #ffffff;
 
-  /* États tickets */
-  --color-status-new: #3467d6;
-  --color-status-new-bg: #edf2fc;
-  --color-status-progress: #b25e09;
-  --color-status-progress-bg: #fdf3e5;
-  --color-status-waiting: #6d28d9;
-  --color-status-waiting-bg: #f3eefc;
-  --color-status-resolved: #15803d;
-  --color-status-resolved-bg: #ebf7ef;
-  --color-status-closed: #52525b;
-  --color-status-closed-bg: #f0f0f1;
+  /* Signal négatif : erreurs, retards, priorité haute, actions destructives.
+     Séparé de l'accent : une erreur ne doit pas avoir la couleur de la marque. */
+  --color-negative: #c4242a;
+  --color-negative-soft: #ffedea;
+  --color-negative-ink: #831c1e;
+  --color-warning: #9a5b00;
+  --color-warning-soft: #fff4dc;
 
-  /* Anneau de focus : l'encre, pas l'accent. L'accent signale déjà l'élément de
-     navigation actif ; un anneau de la même couleur rendrait les deux signaux
-     indiscernables. Le noir contraste sur tous les fonds de l'application. */
-  --color-focus: #1c1c21;
+  /* États tickets — une seule famille de bleus pour ce qui est ouvert (le bleu
+     plein appelle l'action, le bleu nuit travaille, le bleu pâle est « parqué »
+     en attente), un vert pour le résolu, un gris pour le fermé. Cinq teintes
+     arc-en-ciel se lisaient comme une légende, pas comme un cycle de vie. */
+  --color-status-new: #1a4bc4;
+  --color-status-new-bg: #e8eefc;
+  --color-status-progress: #0c2a66;
+  --color-status-progress-bg: #e3e8f2;
+  --color-status-waiting: #5f84d8; /* le trait ; le texte reste à l'encre */
+  --color-status-waiting-bg: #eef2fb;
+  --color-status-resolved: #247b50;
+  --color-status-resolved-bg: #e2f5e9;
+  --color-status-closed: #646a77;
+  --color-status-closed-bg: #eef0f4;
+
+  /* Anneau de focus : l'encre, pas l'accent. L'accent signale déjà la sélection ;
+     un anneau de la même couleur rendrait les deux signaux indiscernables. */
+  --color-focus: #0f1115;
+
+  --radius-sheet: 16px;
 }
 
 /* --- Jeu sombre ------------------------------------------------------------
    Mêmes rôles, mêmes noms : aucun composant ne connaît le thème, il ne lit que
-   les tokens. Les valeurs sont vérifiées au contraste sur les DEUX fonds
-   (`surface` et `canvas`), comme en clair.
+   les tokens. Des neutres francs (ni marine, ni ardoise) : l'élévation se lit
+   à la clarté, la feuille est plus claire que le cadre.
 
    `color-scheme: dark` n'est pas décoratif : sans lui, les menus déroulants des
    trente `<select>` de l'application, les ascenseurs et le sélecteur de date
@@ -73,51 +122,62 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-canvas: #17171a;
-  --color-surface: #202024; /* la carte est plus claire que la page : en sombre
-                               c'est l'élévation qui s'inverse, pas l'ombre */
-  --color-line: #33333b;
-  --color-field: #6d6d7a; /* 3.2:1 sur surface, 3.5:1 sur canvas */
-  --color-ink: #ececed; /* 13.8:1 */
-  --color-ink-soft: #a3a3ad; /* 6.5:1 */
-  --color-ink-faint: #8b8b96; /* 4.8:1 sur surface, 5.3:1 sur canvas */
+  --color-frame: #0c0d0f;
+  --color-canvas: #1b1d21;
+  --color-surface: #141518;
+  --color-active: #24262b;
+  --color-line: #26282d;
+  --color-rule: #1e2024;
+  --color-field: #666b76;
+  --color-ink: #f1f2f4;
+  --color-ink-soft: #b4b8c0;
+  --color-ink-faint: #9499a3;
 
-  --color-accent: #f0708a; /* 5.7:1 en texte ; le #c6364f du thème clair tombe
-                              à 1.6:1 sur fond sombre */
-  --color-accent-strong: #f795a8;
-  --color-accent-soft: #3a2028;
-  --color-on-accent: #17171a;
+  --color-primary: #f1f2f4;
+  --color-primary-strong: #ffffff;
+  --color-on-primary: #0c0d0f;
 
-  /* Statuts : le schéma s'inverse — texte clair sur pastille sombre désaturée,
-     au lieu de texte saturé sur pastille très pâle. */
-  --color-status-new: #84a9f0;
-  --color-status-new-bg: #1c2740;
-  --color-status-progress: #e2a253;
-  --color-status-progress-bg: #37280f;
-  --color-status-waiting: #b494ee;
-  --color-status-waiting-bg: #2a2040;
-  --color-status-resolved: #5cc389;
-  --color-status-resolved-bg: #122e1e;
-  --color-status-closed: #a6a6b2;
-  --color-status-closed-bg: #2c2c34;
+  --color-accent: #7c9ff5; /* 7.1:1 sur la feuille sombre */
+  --color-accent-strong: #a3bcf8;
+  --color-accent-soft: #1a2440;
+  --color-on-accent: #0c0d0f;
 
-  /* L'anneau de focus s'inverse aussi : l'encre noire du thème clair serait
-     invisible sur la page sombre. */
-  --color-focus: #ececed;
+  --color-negative: #f07178;
+  --color-negative-soft: #321a1d;
+  --color-negative-ink: #f7a3a8;
+  --color-warning: #e2a44a;
+  --color-warning-soft: #2e2413;
+
+  --color-status-new: #7c9ff5;
+  --color-status-new-bg: #1a2440;
+  --color-status-progress: #d5ddf2;
+  --color-status-progress-bg: #262b36;
+  --color-status-waiting: #4a6bc0;
+  --color-status-waiting-bg: #1b2030;
+  --color-status-resolved: #5fc28d;
+  --color-status-resolved-bg: #15291e;
+  --color-status-closed: #9499a3;
+  --color-status-closed-bg: #22242a;
+
+  --color-focus: #f1f2f4;
 }
 
 html {
-  background: var(--color-canvas);
+  background: var(--color-frame);
   color: var(--color-ink);
 }
 
 body {
   font-family: var(--font-sans);
   font-size: 14px;
-  /* 1.5 : la valeur `normal` d'Inter (~1.2) serre les descriptions de tickets et
-     les articles d'aide au point de gêner la lecture d'un paragraphe. */
+  /* 1.5 : une interligne serrée gêne la lecture des descriptions de tickets et
+     des articles d'aide dès qu'ils dépassent deux lignes. */
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  /* Overpass dessine ses chiffres à chasse variable par défaut : partout dans
+     l'application on compare des numéros, des compteurs et des heures, donc
+     les chiffres sont tabulaires d'office. */
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- Focus clavier, une seule règle pour toute l'application ---------------
@@ -140,6 +200,22 @@ body {
 ::selection {
   background: var(--color-accent-soft);
   color: var(--color-accent-strong);
+}
+
+/* La pastille d'état est la panse du P de Parqueo : plate à gauche, ronde à
+   droite. Le même motif que le logo, à la taille d'un point de liste. Un ticket
+   « en attente » est parqué : sa pastille est creuse, comme une place libre. */
+.status-mark {
+  display: inline-block;
+  width: 8px;
+  height: 10px;
+  flex: none;
+  border-radius: 0 999px 999px 0;
+  background: currentColor;
+}
+.status-mark[data-parked] {
+  background: color-mix(in srgb, currentColor 28%, transparent);
+  box-shadow: inset 0 0 0 1px currentColor;
 }
 
 /* Un utilisateur qui a demandé moins d'animations n'en reçoit plus : le spinner

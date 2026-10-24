@@ -113,7 +113,7 @@ export default function Kb() {
                     <div className="flex flex-wrap items-baseline gap-x-2">
                       <span className="text-sm font-medium text-ink">{a.title}</span>
                       {!a.published && (
-                        <span className="rounded bg-canvas px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-ink-soft">
+                        <span className="rounded bg-canvas px-1.5 py-px text-xs font-medium text-ink-soft">
                           Brouillon
                         </span>
                       )}

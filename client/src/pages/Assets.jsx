@@ -127,7 +127,7 @@ export default function Assets() {
         const stale = isStaleAsset(a, staleDays);
         return (
           <span
-            className={stale ? 'flex items-center gap-1 text-accent' : undefined}
+            className={stale ? 'flex items-center gap-1 text-negative' : undefined}
             title={stale ? 'Aucune remontée récente' : undefined}
           >
             {formatRelative(a.lastSeenAt)}

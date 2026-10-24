@@ -21,16 +21,19 @@ export const TRIGGERS = {
 // `icon` est un composant du jeu SVG maison : les emoji d'origine juraient avec
 // le reste de l'interface et dépendaient de la police emoji du poste.
 export const STEP_CATALOG = {
-  assign_team: { label: 'Affecter à une équipe', icon: IconUsers, accent: 'var(--color-status-waiting)' },
-  assign_user: { label: 'Assigner à une personne', icon: IconUserCheck, accent: 'var(--color-accent)' },
-  set_priority: { label: 'Changer la priorité', icon: IconFlag, accent: 'var(--color-status-progress)' },
-  set_status: { label: 'Changer le statut', icon: IconStatus, accent: 'var(--color-status-new)' },
+  // La teinte code le genre du bloc, pas le bloc : les actions sont neutres, la
+  // condition est en ambre, l'attente prend le bleu pâle du ticket « parqué ».
+  // Le déclencheur, seul en bleu panneau, est posé par WorkflowCanvas.
+  assign_team: { label: 'Affecter à une équipe', icon: IconUsers, accent: 'var(--color-ink-soft)' },
+  assign_user: { label: 'Assigner à une personne', icon: IconUserCheck, accent: 'var(--color-ink-soft)' },
+  set_priority: { label: 'Changer la priorité', icon: IconFlag, accent: 'var(--color-ink-soft)' },
+  set_status: { label: 'Changer le statut', icon: IconStatus, accent: 'var(--color-ink-soft)' },
   add_note: { label: 'Ajouter une note', icon: IconNote, accent: 'var(--color-ink-soft)' },
-  send_email: { label: 'Envoyer un email', icon: IconMail, accent: 'var(--color-status-resolved)' },
-  webhook: { label: 'Webhook (n8n, Zapier…)', icon: IconLink, accent: 'var(--color-status-closed)' },
-  condition: { label: 'Condition (oui / non)', icon: IconBranch, accent: 'var(--color-status-new)', branch: true },
-  wait_assigned: { label: 'Attendre la prise en charge', icon: IconHourglass, accent: 'var(--color-status-progress)', gate: true },
-  wait_status: { label: 'Attendre un statut', icon: IconHourglass, accent: 'var(--color-status-progress)', gate: true },
+  send_email: { label: 'Envoyer un email', icon: IconMail, accent: 'var(--color-ink-soft)' },
+  webhook: { label: 'Webhook (n8n, Zapier…)', icon: IconLink, accent: 'var(--color-ink-soft)' },
+  condition: { label: 'Condition (oui / non)', icon: IconBranch, accent: 'var(--color-warning)', branch: true },
+  wait_assigned: { label: 'Attendre la prise en charge', icon: IconHourglass, accent: 'var(--color-status-waiting)', gate: true },
+  wait_status: { label: 'Attendre un statut', icon: IconHourglass, accent: 'var(--color-status-waiting)', gate: true },
 };
 
 // Blocs proposés selon le déclencheur : les attentes seulement à la création.

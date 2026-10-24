@@ -63,11 +63,11 @@ function Toggle({ checked, onChange, labelledBy, describedBy }) {
     >
       <span
         className={`relative block h-5 w-9 rounded-full transition-colors ${
-          checked ? 'bg-accent' : 'bg-field'
+          checked ? 'bg-primary' : 'bg-field'
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface shadow-sm transition-all ${
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface shadow-sm transition-[left] ${
             checked ? 'left-4.5' : 'left-0.5'
           }`}
         />

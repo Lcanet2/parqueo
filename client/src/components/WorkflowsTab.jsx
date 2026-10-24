@@ -17,7 +17,10 @@ function toDraft(wf) {
       priority: wf.conditions?.priority ?? '',
       toStatus: wf.conditions?.toStatus ?? '',
     },
-    steps: wf.steps.map((s) => ({ type: s.type, config: { ...s.config }, x: s.x, y: s.y })),
+    // `key` et `edges` portent le graphe : sans eux, l'éditeur retombait sur une
+    // chaîne linéaire et un enregistrement effaçait les branches oui / non.
+    steps: wf.steps.map((s) => ({ key: s.key, type: s.type, config: { ...s.config }, x: s.x, y: s.y })),
+    edges: wf.edges ?? {},
     layout: wf.layout ?? {},
   };
 }

@@ -307,7 +307,9 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
           onWheel={onWheel}
           className="absolute inset-0 touch-none"
           style={{
-            backgroundImage: 'radial-gradient(var(--color-line) 1px, transparent 1px)',
+            // Trame de points du canevas : un repère de placement qui suit le
+            // zoom et le déplacement, pas un décor.
+            backgroundImage: 'radial-gradient(var(--color-line) 1px, transparent 1px)', // taste-skill-ignore
             backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
             backgroundPosition: `${pan.x}px ${pan.y}px`,
             cursor: drag.current?.kind === 'pan' ? 'grabbing' : 'grab',
@@ -323,7 +325,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
                   key={i}
                   a={outPos(c.from, c.port)}
                   b={inPos(c.to)}
-                  color={c.port === 'yes' ? 'var(--color-status-resolved)' : c.port === 'no' ? 'var(--color-accent)' : 'var(--color-ink-faint)'}
+                  color={c.port === 'yes' ? 'var(--color-status-resolved)' : c.port === 'no' ? 'var(--color-negative)' : 'var(--color-ink-faint)'}
                 />
               ))}
               {connecting && <Wire a={outPos(connecting.from, connecting.port)} b={{ x: connecting.x, y: connecting.y }} dashed />}
@@ -382,7 +384,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold">{STEP_CATALOG[selectedNode.type].label}</span>
-                  <button onClick={() => deleteNode(selectedNode.key)} className="cursor-pointer text-xs text-accent hover:underline">
+                  <button onClick={() => deleteNode(selectedNode.key)} className="cursor-pointer text-xs text-negative hover:underline">
                     Supprimer
                   </button>
                 </div>
@@ -396,7 +398,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
       <p className="text-xs text-ink-faint">
         Glissez les blocs, tirez un fil depuis un point de sortie vers un autre bloc pour définir l'ordre. Un
         bloc « condition » a deux sorties <span className="text-status-resolved">oui</span> /{' '}
-        <span className="text-accent">non</span>. Molette pour zoomer, glissez le fond pour vous déplacer.
+        <span className="text-negative">non</span>. Molette pour zoomer, glissez le fond pour vous déplacer.
       </p>
 
       <div className="flex justify-end gap-2">
@@ -461,15 +463,18 @@ function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, ou
           {subtitle && <div className="truncate text-xs text-ink-faint">{subtitle}</div>}
         </div>
         {gate && (
-          <span className="rounded bg-status-progress-bg px-1 text-[9px] font-semibold uppercase tracking-wide text-status-progress">
-            wait
+          // Le ticket se gare sur ce bloc : la pastille creuse est celle des
+          // tickets « en attente » dans les listes.
+          <span className="flex flex-none items-center gap-1 text-[11px] font-medium text-ink-soft" title="Le ticket est parqué ici jusqu'à ce que la condition soit remplie">
+            <span className="status-mark" data-parked="" style={{ color: 'var(--color-status-waiting)' }} />
+            Parqué
           </span>
         )}
         {onDelete && (
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={onDelete}
-            className="cursor-pointer text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-accent"
+            className="cursor-pointer text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-negative"
             aria-label={`Supprimer le bloc « ${title} »`}
             title="Supprimer"
           >
@@ -484,8 +489,8 @@ function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, ou
         <span key={o.port} className="absolute flex items-center" style={{ right: -7, top: o.y - 7 }}>
           {o.label && (
             <span
-              className="mr-2 text-[10px] font-semibold"
-              style={{ color: o.port === 'yes' ? 'var(--color-status-resolved)' : 'var(--color-accent)' }}
+              className="mr-2 text-[11px] font-semibold"
+              style={{ color: o.port === 'yes' ? 'var(--color-status-resolved)' : 'var(--color-negative)' }}
             >
               {o.label}
             </span>
@@ -494,7 +499,7 @@ function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, ou
             onPointerDown={(e) => onOut(e, fromKey, o.port)}
             title="Tirer un fil"
             className="h-3.5 w-3.5 cursor-crosshair rounded-full border-2 border-surface hover:scale-125"
-            style={{ background: o.port === 'yes' ? 'var(--color-status-resolved)' : o.port === 'no' ? 'var(--color-accent)' : 'var(--color-accent)' }}
+            style={{ background: o.port === 'yes' ? 'var(--color-status-resolved)' : o.port === 'no' ? 'var(--color-negative)' : 'var(--color-accent)' }}
           />
         </span>
       ))}
@@ -763,7 +768,7 @@ function ConditionConfig({ cfg, refs, onConfig }) {
       )}
       <p className="text-xs text-ink-faint">
         Le ticket suit la sortie <span className="text-status-resolved">oui</span> si le test est vrai, sinon{' '}
-        <span className="text-accent">non</span>.
+        <span className="text-negative">non</span>.
       </p>
     </div>
   );

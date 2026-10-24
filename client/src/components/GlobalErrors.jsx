@@ -31,9 +31,9 @@ export default function GlobalErrors() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center p-4">
       <div
         role="alert"
-        className="pointer-events-auto flex items-center gap-3 rounded-md border border-accent bg-accent-soft py-1.5 pr-1.5 pl-4 shadow-sm"
+        className="pointer-events-auto flex items-center gap-3 rounded-md border border-negative/40 bg-negative-soft py-1.5 pr-1.5 pl-4 text-negative-ink shadow-sm"
       >
-        <IconAlert className="shrink-0 text-accent" />
+        <IconAlert className="shrink-0 text-negative" />
         <span className="text-sm text-ink">{message}</span>
         <IconButton label="Fermer le message" onClick={() => setMessage(null)}>
           <IconX />

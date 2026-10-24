@@ -409,7 +409,7 @@ function SaveIndicator({ state }) {
   const map = {
     saving: { text: 'Enregistrement…', cls: 'text-ink-faint' },
     saved: { text: 'Enregistré', cls: 'text-status-resolved', icon: true },
-    error: { text: 'Échec de l’enregistrement', cls: 'text-accent' },
+    error: { text: 'Échec de l’enregistrement', cls: 'text-negative' },
   };
   const { text, cls, icon } = map[state];
   return (
