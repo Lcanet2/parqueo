@@ -66,7 +66,7 @@ restauration), suivez la
 
 ## Documentation
 
-En ligne sur **[parqueo.fr/docs](https://parqueo.fr/docs/)**, également disponible en PDF.
+En ligne sur **[parqueo.fr/docs](https://parqueo.fr/docs/)**.
 
 | Document | Pour qui |
 | -------- | -------- |
@@ -74,9 +74,10 @@ En ligne sur **[parqueo.fr/docs](https://parqueo.fr/docs/)**, également disponi
 | [Documentation d'installation](https://parqueo.fr/docs/installation/) | La personne qui déploie et exploite : prérequis, nginx, systemd, variables d'environnement, sauvegarde, dépannage |
 | [Documentation technique](https://parqueo.fr/docs/technique/) | Développeurs — architecture, modèle de données, API HTTP, moteur de workflows, sécurité |
 
-Les sources (Markdown, captures d'écran, générateurs PDF et web) vivent dans le
-dépôt `parqueo-docs`, séparé de celui-ci : la documentation évolue à son propre
-rythme et n'alourdit pas le clone du logiciel.
+Les pages et leurs captures d'écran vivent dans le dépôt du site,
+[`parqueo-site`](https://github.com/Lcanet2/parqueo-site), dossier `docs/` :
+la documentation évolue à son propre rythme et n'alourdit pas le clone du
+logiciel.
 
 ---
 
