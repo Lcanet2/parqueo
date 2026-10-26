@@ -682,7 +682,7 @@ function TriggerPanel({ meta, conditions, refs, onTrigger, onCond }) {
               ))}
             </Select>
           </Field>
-          <Field label="Priorité">
+          <Field label={meta.trigger === 'priority_changed' ? 'Nouvelle priorité' : 'Priorité'}>
             <Select value={conditions.priority} onChange={(e) => onCond('priority', e.target.value)}>
               <option value="">Toutes</option>
               {Object.entries(TICKET_PRIORITY).map(([k, v]) => (
@@ -812,6 +812,9 @@ function StepConfig({ node, refs, onConfig }) {
               <option key={k} value={k}>{v.label}</option>
             ))}
           </Select>
+          {cfg.status === 'resolved' && (
+            <p className="mt-1 text-xs text-ink-faint">Un ticket fermé directement reprend aussi.</p>
+          )}
         </Field>
       );
     default:

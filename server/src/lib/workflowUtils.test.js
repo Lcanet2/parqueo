@@ -73,6 +73,14 @@ test('wait_status : franchi seulement au statut cible', () => {
   assert.equal(isGateSatisfied(node, { ...ticket, status: 'resolved' }), true);
 });
 
+test('wait_status « Résolu » : franchi aussi par un ticket fermé directement', () => {
+  const resolu = { type: 'wait_status', config: { status: 'resolved' } };
+  assert.equal(isGateSatisfied(resolu, { ...ticket, status: 'closed' }), true);
+  // Seule l'attente « Résolu » en profite : « En cours » n'est pas franchi par « Fermé ».
+  const enCours = { type: 'wait_status', config: { status: 'in_progress' } };
+  assert.equal(isGateSatisfied(enCours, { ...ticket, status: 'closed' }), false);
+});
+
 test('une action n\'est jamais bloquante', () => {
   assert.equal(isGateSatisfied({ type: 'assign_team' }, ticket), true);
 });

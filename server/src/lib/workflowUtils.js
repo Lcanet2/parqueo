@@ -14,6 +14,10 @@ export function isGateSatisfied(node, ticket) {
     case 'wait_assigned':
       return ticket.assigneeId != null;
     case 'wait_status':
+      // Fermer un ticket sans passer par « Résolu » est courant : il a dépassé
+      // ce stade, l'attente est franchie. Sinon il y restait parqué pour
+      // toujours et les actions de fin (enquête, post-mortem…) ne partaient pas.
+      if (node.config?.status === 'resolved' && ticket.status === 'closed') return true;
       return ticket.status === node.config?.status;
     default:
       return true; // une action n'est jamais bloquante
