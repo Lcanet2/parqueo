@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { Button, Input, Select, Textarea, Field, ErrorText } from './ui.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../lib/labels.js';
@@ -16,6 +16,29 @@ const YES_Y = 20; // sortie « oui » d'une condition
 const NO_Y = 48; // sortie « non » d'une condition
 
 const isBranch = (type) => STEP_CATALOG[type]?.branch;
+
+// Hauteur du canevas : de son bord haut jusqu'au bas de la fenêtre, moins la
+// marge basse de <main>. Mesurée plutôt que codée en dur (`100vh - 13rem`
+// laissait le bouton d'enregistrement sous la ligne de flottaison) : elle suit
+// l'en-tête, les onglets et une barre d'outils qui passe sur deux lignes.
+function useFrameHeight(ref) {
+  const [height, setHeight] = useState(undefined);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const main = el.closest('main');
+    const measure = () => {
+      const style = main ? getComputedStyle(main) : null;
+      const below = style ? parseFloat(style.paddingBottom) + parseFloat(style.marginBottom) : 0;
+      const top = el.getBoundingClientRect().top + window.scrollY; // position dans la page
+      setHeight(Math.floor(window.innerHeight - top - below));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [ref]);
+  return height;
+}
 
 // --- Conversions modèle <-> API ---
 function toModel(wf) {
@@ -91,6 +114,8 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
   const [error, setError] = useState(null);
 
   const wrapRef = useRef(null);
+  const frameRef = useRef(null);
+  const frameHeight = useFrameHeight(frameRef);
   const drag = useRef(null);
 
   const nodePos = (key) =>
@@ -328,11 +353,19 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
           <Button variant="ghost" onClick={() => setZoom((z) => Math.min(1.6, z * 1.2))}>+</Button>
           <Button variant="ghost" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Recentrer</Button>
         </div>
+        <div className="flex gap-2">
+          <Button onClick={onCancel}>Annuler</Button>
+          <Button variant="primary" onClick={save}>Enregistrer le workflow</Button>
+        </div>
       </div>
 
       <ErrorText>{error}</ErrorText>
 
-      <div className="relative h-[calc(100vh-13rem)] min-h-[520px] overflow-hidden rounded-lg border border-line bg-canvas">
+      <div
+        ref={frameRef}
+        style={{ height: frameHeight }}
+        className="relative min-h-[420px] overflow-hidden rounded-lg border border-line bg-canvas"
+      >
         <div
           ref={wrapRef}
           onPointerDown={onPointerDownBg}
@@ -450,18 +483,12 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
             )}
           </div>
         )}
-      </div>
-
-      <p className="text-xs text-ink-faint">
-        Glissez les blocs, tirez un fil depuis un point de sortie vers un autre bloc pour définir l'ordre ;
-        cliquez sur un fil pour le supprimer. Un
-        bloc « condition » a deux sorties <span className="text-positive">oui</span> /{' '}
-        <span className="text-negative">non</span>. Molette pour zoomer, glissez le fond pour vous déplacer.
-      </p>
-
-      <div className="flex justify-end gap-2">
-        <Button onClick={onCancel}>Annuler</Button>
-        <Button variant="primary" onClick={save}>Enregistrer le workflow</Button>
+        <p className="pointer-events-none absolute bottom-2 left-3 max-w-xl text-xs text-ink-faint">
+          Glissez les blocs, tirez un fil depuis un point de sortie vers un autre bloc pour définir l'ordre ;
+          cliquez sur un fil pour le supprimer. Un
+          bloc « condition » a deux sorties <span className="text-positive">oui</span> /{' '}
+          <span className="text-negative">non</span>. Molette pour zoomer, glissez le fond pour vous déplacer.
+        </p>
       </div>
     </div>
   );
@@ -601,7 +628,7 @@ function nodeSummary(node, refs) {
     case 'webhook':
       return c.url ? c.url.replace(/^https?:\/\//, '').slice(0, 24) : 'URL à définir';
     case 'condition':
-      return conditionSummary(c);
+      return conditionSummary(c, refs);
     case 'wait_assigned':
       return 'jusqu\'à prise en charge';
     case 'wait_status':
@@ -611,15 +638,17 @@ function nodeSummary(node, refs) {
   }
 }
 
-function conditionSummary(c) {
+// Catégorie et formulaire sont stockés par id : on affiche leur nom.
+function conditionSummary(c, refs) {
   if (c.field === 'assigned') return 'déjà pris en charge ?';
   const label = CONDITION_FIELDS.find((f) => f.value === c.field)?.label ?? '';
-  const val =
-    c.field === 'priority'
-      ? TICKET_PRIORITY[c.value]?.label
-      : c.field === 'status'
-        ? TICKET_STATUS[c.value]?.label
-        : c.value;
+  const byId = (list) => list.find((x) => x.id === Number(c.value))?.name;
+  const val = {
+    priority: () => TICKET_PRIORITY[c.value]?.label,
+    status: () => TICKET_STATUS[c.value]?.label,
+    category: () => byId(refs.categories),
+    form: () => byId(refs.forms),
+  }[c.field]?.();
   return `${label} « ${val ?? '?'} » ?`;
 }
 
