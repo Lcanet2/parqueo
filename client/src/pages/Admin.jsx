@@ -301,7 +301,9 @@ function UsersTab() {
   return (
     <div className="space-y-4">
       <Card title="Créer un compte">
-        <form onSubmit={createUser} className="grid max-w-3xl gap-3 p-4 sm:grid-cols-2">
+        {/* Toute la largeur de la carte : sur grand écran, les quatre champs
+            tiennent sur une ligne au lieu de laisser la moitié droite vide. */}
+        <form onSubmit={createUser} className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
           <Field label="Nom">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </Field>
@@ -328,7 +330,7 @@ function UsersTab() {
               </Select>
             </Field>
           </div>
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 xl:col-span-4">
             <ErrorText>{error}</ErrorText>
             <div className="flex justify-end">
               <Button variant="primary" type="submit">Créer le compte</Button>
