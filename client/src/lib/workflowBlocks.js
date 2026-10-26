@@ -15,6 +15,7 @@ import {
 export const TRIGGERS = {
   ticket_created: { label: 'Un ticket est créé', short: 'Ticket créé' },
   status_changed: { label: 'Le statut change', short: 'Statut changé' },
+  priority_changed: { label: 'La priorité change', short: 'Priorité changée' },
 };
 
 // type → libellé, icône, couleur. `gate` = bloc d'attente (le ticket s'y parque).

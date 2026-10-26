@@ -15,11 +15,11 @@ import { statutApresAssignation } from '../lib/statut.js';
 // suit sa branche oui/non ; un bloc « attente » parque le ticket tant que sa
 // condition n'est pas remplie — les changements ultérieurs (assignation,
 // statut) relancent le parcours depuis ce bloc. Les workflows « statut changé »
-// sont réactifs : mêmes règles mais sans parking. Une action en échec est
+// et « priorité changée » sont réactifs : mêmes règles mais sans parking. Une action en échec est
 // loggée et sautée. Les modifications faites par une étape ne re-déclenchent
 // jamais d'autre workflow (anti-boucle par construction).
 
-export const WORKFLOW_TRIGGERS = ['ticket_created', 'status_changed'];
+export const WORKFLOW_TRIGGERS = ['ticket_created', 'status_changed', 'priority_changed'];
 export const ACTION_TYPES = [
   'assign_team',
   'assign_user',
@@ -64,18 +64,26 @@ export async function onTicketCreated(ticket) {
 export async function onTicketUpdated(ticket, ctx = {}) {
   let current = ticket;
 
-  if (ctx.statusChanged) {
-    const workflows = await prisma.workflow.findMany({
-      where: { trigger: 'status_changed', active: true },
-      include: withGraph,
-      orderBy: [{ position: 'asc' }, { id: 'asc' }],
-    });
-    for (const wf of workflows) {
-      if (matchesConditions(wf.conditions, current, ctx)) current = await traverse(wf, wf.edges?.trigger, current, null);
-    }
-  }
+  if (ctx.statusChanged) current = await runReactive('status_changed', current, ctx);
+  // Un ticket devenu urgent après sa création : sans ce déclencheur, rien ne
+  // pouvait réagir (la condition « priorité » d'un workflow de création n'est
+  // évaluée qu'une fois). La condition `priority` porte la nouvelle priorité.
+  if (ctx.priorityChanged) current = await runReactive('priority_changed', current, ctx);
 
   return resumeRuns(current);
+}
+
+async function runReactive(trigger, ticket, ctx) {
+  const workflows = await prisma.workflow.findMany({
+    where: { trigger, active: true },
+    include: withGraph,
+    orderBy: [{ position: 'asc' }, { id: 'asc' }],
+  });
+  let current = ticket;
+  for (const wf of workflows) {
+    if (matchesConditions(wf.conditions, current, ctx)) current = await traverse(wf, wf.edges?.trigger, current, null);
+  }
+  return current;
 }
 
 // --- Machine à états sur le graphe ---

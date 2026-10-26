@@ -399,12 +399,13 @@ router.patch('/:id', requireRole('admin', 'technician'), async (req, res) => {
     notifyAssigned(ticket);
   }
 
-  // Automatismes « statut changé » + reprise des workflows parqués : une
-  // assignation débloque un « attendre prise en charge », un statut débloque un
-  // « attendre statut ». On relance dès qu'un de ces deux champs change.
-  if (data.status !== undefined || data.assigneeId !== undefined) {
+  // Automatismes « statut changé » / « priorité changée » + reprise des
+  // workflows parqués : une assignation débloque un « attendre prise en
+  // charge », un statut débloque un « attendre statut ».
+  if (data.status !== undefined || data.assigneeId !== undefined || data.priority !== undefined) {
     ticket = await onTicketUpdated(ticket, {
       statusChanged: data.status !== undefined,
+      priorityChanged: data.priority !== undefined,
       oldStatus: existing.status,
       newStatus: ticket.status,
     });

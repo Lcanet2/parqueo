@@ -126,6 +126,79 @@ describe('clôture automatique', () => {
   });
 });
 
+describe('workflows : cas limites', () => {
+  let tokenTech;
+  before(async () => {
+    tokenTech = await login(api, ctx.tech.email);
+  });
+
+  const nouveauTicket = (priority = 'medium') =>
+    api.post('/api/tickets', {
+      token: tokenAdmin,
+      body: { title: 'x', description: 'y', categoryId: ctx.category.id, priority },
+    });
+  const notesDe = async (id) =>
+    (await prisma.ticketComment.findMany({ where: { ticketId: id } })).map((c) => c.body);
+
+  test('fermé sans passer par « Résolu », un ticket quitte son attente « Résolu »', async () => {
+    const wf = await prisma.workflow.create({
+      data: {
+        name: 'Suivi de résolution',
+        trigger: 'ticket_created',
+        edges: { trigger: 'attente', attente: 'fin' },
+        steps: {
+          create: [
+            { key: 'attente', type: 'wait_status', config: { status: 'resolved' } },
+            { key: 'fin', type: 'add_note', config: { body: 'Actions de fin exécutées' } },
+          ],
+        },
+      },
+    });
+    const t = await nouveauTicket();
+    const run = () => prisma.workflowRun.findFirst({ where: { ticketId: t.data.id, workflowId: wf.id } });
+    assert.equal((await run()).nodeKey, 'attente');
+
+    await api.patch(`/api/tickets/${t.data.id}`, { token: tokenTech, body: { status: 'closed' } });
+
+    assert.equal((await run()).status, 'done');
+    assert.ok((await notesDe(t.data.id)).includes('Actions de fin exécutées'));
+    await prisma.workflow.delete({ where: { id: wf.id } });
+  });
+
+  test('« La priorité change » réagit à un ticket devenu urgent, et seulement à lui', async () => {
+    const wf = await prisma.workflow.create({
+      data: {
+        name: 'Escalade tardive',
+        trigger: 'priority_changed',
+        conditions: { priority: 'high' },
+        edges: { trigger: 'note' },
+        steps: { create: [{ key: 'note', type: 'add_note', config: { body: 'Escalade #{{ticket.id}}' } }] },
+      },
+    });
+    const urgent = await nouveauTicket('medium');
+    const calme = await nouveauTicket('medium');
+    const escalades = async (id) => (await notesDe(id)).filter((b) => b === `Escalade #${id}`).length;
+
+    await api.patch(`/api/tickets/${urgent.data.id}`, { token: tokenTech, body: { priority: 'high' } });
+    await api.patch(`/api/tickets/${calme.data.id}`, { token: tokenTech, body: { priority: 'low' } });
+    // Un autre champ modifié sans toucher à la priorité ne déclenche rien.
+    await api.patch(`/api/tickets/${urgent.data.id}`, { token: tokenTech, body: { title: 'renommé' } });
+
+    assert.equal(await escalades(urgent.data.id), 1);
+    assert.equal(await escalades(calme.data.id), 0);
+    await prisma.workflow.delete({ where: { id: wf.id } });
+  });
+
+  test('un workflow « priorité changée » est accepté par l’API', async () => {
+    const r = await api.post('/api/workflows', {
+      token: tokenAdmin,
+      body: { name: 'Priorité', trigger: 'priority_changed' },
+    });
+    assert.equal(r.status, 201);
+    await prisma.workflow.delete({ where: { id: r.data.id } });
+  });
+});
+
 describe('identité SNMP', () => {
   beforeEach(async () => {
     await prisma.softwareInstall.deleteMany();
