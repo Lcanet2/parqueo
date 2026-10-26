@@ -81,6 +81,16 @@
   --color-accent-soft: #e8eefc;
   --color-on-accent: #ffffff;
 
+  /* Le panneau — la barre latérale est le panneau « P » lui-même : un aplat
+     bleu, le P et les libellés en blanc, la feuille blanche posée dessus. Le
+     bleu du cadre est celui du site (parqueo.fr) ; dans la feuille, l'accent
+     reste réservé aux données. Le blanc atténué des libellés tient 5.3:1 sur
+     le bleu. */
+  --color-sign: #1a4bc4;
+  --color-sign-hover: #315dca; /* blanc à 10 % sur le bleu : survol d'un lien */
+  --color-on-sign: #ffffff;
+  --color-on-sign-soft: #d1dbf3;
+
   /* Signal négatif : erreurs, retards, priorité haute, actions destructives.
      Séparé de l'accent : une erreur ne doit pas avoir la couleur de la marque. */
   --color-negative: #c4242a;
@@ -142,6 +152,13 @@
   --color-accent-strong: #a3bcf8;
   --color-accent-soft: #1a2440;
   --color-on-accent: #0c0d0f;
+
+  /* Un bleu plus profond qu'en clair : en sombre, l'aplat ne doit pas éblouir
+     à côté de la feuille. Le blanc atténué tient 6:1. */
+  --color-sign: #1e45ad;
+  --color-sign-hover: #355ab6;
+  --color-on-sign: #ffffff;
+  --color-on-sign-soft: #d2daef;
 
   --color-negative: #f07178;
   --color-negative-soft: #321a1d;

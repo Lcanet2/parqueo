@@ -38,10 +38,10 @@ function useTheme() {
 }
 
 // Commande compacte de la barre latérale : une simple bascule entre les deux
-// thèmes. Le libellé accessible dit l'état courant ET ce que le clic va faire —
+// thèmes. `onSign` : posée sur l'aplat bleu, elle passe au blanc. Le libellé accessible dit l'état courant ET ce que le clic va faire —
 // « Thème : sombre. Passer en clair » — parce qu'une icône seule ne dit ni l'un
 // ni l'autre.
-export function ThemeToggle() {
+export function ThemeToggle({ onSign = false }) {
   const [theme, choose] = useTheme();
   const current = OPTIONS.find((o) => o.value === theme) ?? OPTIONS[0];
   const next = OPTIONS.find((o) => o.value !== current.value);
@@ -52,7 +52,9 @@ export function ThemeToggle() {
       onClick={() => choose(next.value)}
       aria-label={`Thème : ${current.label.toLowerCase()}. Passer en ${next.label.toLowerCase()}`}
       title={`Thème : ${current.label.toLowerCase()}`}
-      className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-ink-faint transition-colors hover:bg-canvas hover:text-ink [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
+      className={`inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 ${
+        onSign ? 'text-on-sign-soft hover:bg-sign-hover hover:text-on-sign' : 'text-ink-faint hover:bg-canvas hover:text-ink'
+      }`}
     >
       <current.Icon />
     </button>

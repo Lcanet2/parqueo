@@ -107,6 +107,8 @@ export function IconButton({ label, children, variant = 'ghost', className = '',
     ghost: 'text-ink-soft hover:bg-canvas hover:text-ink',
     danger: 'text-ink-soft hover:bg-negative-soft hover:text-negative',
     active: 'bg-active text-ink',
+    // Sur l'aplat bleu de la barre latérale.
+    sign: 'text-on-sign-soft hover:bg-sign-hover hover:text-on-sign',
   };
   return (
     <button

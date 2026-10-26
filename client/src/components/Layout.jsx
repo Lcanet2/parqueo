@@ -17,16 +17,20 @@ import {
 } from './icons.jsx';
 
 // NavLink pose lui-même `aria-current="page"` sur le lien actif : l'état actif
-// n'est donc pas porté par la seule couleur d'accent.
-// Ligne active : une pastille grise, le libellé à l'encre. Le bleu de la marque
-// reste aux données — une barre latérale colorée tirait l'œil hors du travail.
-function navClass({ isActive }) {
+// n'est donc pas porté par la seule couleur.
+// La barre latérale est le panneau bleu : libellés en blanc atténué, et la page
+// courante prend la forme de la panse du P, en blanc — plate contre le bord
+// gauche de la barre, ronde à droite, du même blanc que la feuille où l'on
+// travaille. Sur téléphone, la rangée défile : la pastille y est ronde des
+// deux côtés, faute de bord où s'appuyer.
+function navClass({ isActive }, { edge = true } = {}) {
   return [
-    'flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors whitespace-nowrap',
+    'flex h-8 items-center gap-2.5 text-sm transition-colors whitespace-nowrap',
     '[@media(pointer:coarse)]:min-h-11',
+    edge ? '-ml-3 rounded-r-full pr-3 pl-5.5' : 'rounded-full px-3',
     isActive
-      ? 'bg-active font-medium text-ink'
-      : 'text-ink-soft hover:bg-active/60 hover:text-ink',
+      ? 'bg-surface font-medium text-ink [&_svg]:text-accent'
+      : 'text-on-sign-soft hover:bg-sign-hover hover:text-on-sign',
   ].join(' ');
 }
 
@@ -67,10 +71,12 @@ export default function Layout() {
   );
 
   return (
-    // Le cadre (barre latérale, teinté) et la feuille (la page, blanche) : une
-    // seule marche de ton les sépare, sans filet ni ombre. Sur téléphone le
-    // cadre disparaît et la feuille devient l'écran.
-    <div className="min-h-screen bg-frame md:flex">
+    // Le cadre (barre latérale, le panneau bleu) et la feuille (la page,
+    // blanche) posée dessus, comme la plaque blanche d'un panneau. Sur
+    // téléphone le cadre se réduit à la barre du haut et la feuille devient
+    // l'écran. Dans le cadre, l'anneau de focus passe au blanc : l'encre ne se
+    // verrait pas sur le bleu.
+    <div className="min-h-screen bg-sign md:flex">
       {/* Lien d'évitement : au clavier, la première tabulation d'une page permet
           de sauter les huit liens de navigation répétés sur chaque écran. Il
           n'apparaît qu'une fois focalisé. */}
@@ -82,15 +88,15 @@ export default function Layout() {
       </a>
 
       {/* Sidebar desktop */}
-      <aside className="hidden w-57 shrink-0 flex-col px-3 pt-4 pb-3 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
+      <aside className="hidden w-57 shrink-0 flex-col px-3 pt-4 pb-3 text-on-sign md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto [--color-focus:var(--color-on-sign)]">
         {/* La marque était à 15 px, soit moins que les libellés de navigation
             juste en dessous : elle passait pour une ligne de menu parmi les
             autres. 22 px la remettent au rang d'en-tête. */}
         <div className="mb-7 flex items-center justify-between gap-2 pr-1 pl-2.5">
           <Link to="/" className="min-w-0 text-[23px] leading-none">
-            <Brand />
+            <Brand mono />
           </Link>
-          <ThemeToggle />
+          <ThemeToggle onSign />
         </div>
         {nav}
         <div className="pt-3">
@@ -98,15 +104,15 @@ export default function Layout() {
             <Link
               to="/compte"
               title="Mon compte"
-              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md transition-colors hover:text-ink-soft"
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md transition-colors hover:text-on-sign-soft"
             >
               <Avatar name={user.name} id={user.id} avatar={user.avatar} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{user.name}</span>
-                <span className="block text-xs text-ink-faint">{ROLE[user.role]}</span>
+                <span className="block text-xs text-on-sign-soft">{ROLE[user.role]}</span>
               </span>
             </Link>
-            <IconButton label="Se déconnecter" onClick={onLogout} variant="danger">
+            <IconButton label="Se déconnecter" onClick={onLogout} variant="sign">
               <IconLogout />
             </IconButton>
           </div>
@@ -114,24 +120,24 @@ export default function Layout() {
       </aside>
 
       {/* Header mobile */}
-      <header className="sticky top-0 z-10 bg-frame md:hidden">
+      <header className="sticky top-0 z-10 bg-sign text-on-sign md:hidden [--color-focus:var(--color-on-sign)]">
         <div className="flex h-12 items-center justify-between px-4">
           <Link to="/" className="text-[19px] leading-none">
-            <Brand />
+            <Brand mono />
           </Link>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link to="/compte" className="text-sm text-ink-soft">
+            <ThemeToggle onSign />
+            <Link to="/compte" className="text-sm text-on-sign-soft hover:text-on-sign">
               Mon compte
             </Link>
-            <button onClick={onLogout} className="text-sm text-ink-soft">
+            <button onClick={onLogout} className="text-sm text-on-sign-soft hover:text-on-sign">
               Déconnexion
             </button>
           </div>
         </div>
         <nav aria-label="Navigation principale" className="flex gap-1 overflow-x-auto px-2 pb-2">
           {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className={navClass}>
+            <NavLink key={l.to} to={l.to} end={l.end} className={(state) => navClass(state, { edge: false })}>
               <l.Icon />
               {l.label}
             </NavLink>
@@ -144,7 +150,7 @@ export default function Layout() {
       <main
         id="contenu"
         tabIndex={-1}
-        className="min-w-0 flex-1 bg-surface px-4 py-5 focus:outline-none md:my-2 md:mr-2 md:min-h-[calc(100vh-1rem)] md:rounded-(--radius-sheet) md:border md:border-line md:px-8 md:py-7"
+        className="min-w-0 flex-1 bg-surface px-4 py-5 focus:outline-none md:my-2 md:mr-2 md:min-h-[calc(100vh-1rem)] md:rounded-(--radius-sheet) md:px-8 md:py-7"
       >
         <Outlet />
       </main>
