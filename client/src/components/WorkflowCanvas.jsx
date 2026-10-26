@@ -347,13 +347,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
             </div>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-1">
-          <Button variant="ghost" onClick={() => setZoom((z) => Math.max(0.4, z / 1.2))}>−</Button>
-          <span className="w-10 text-center text-xs text-ink-faint">{Math.round(zoom * 100)}%</span>
-          <Button variant="ghost" onClick={() => setZoom((z) => Math.min(1.6, z * 1.2))}>+</Button>
-          <Button variant="ghost" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Recentrer</Button>
-        </div>
-        <div className="flex gap-2">
+        <div className="ml-auto flex gap-2">
           <Button onClick={onCancel}>Annuler</Button>
           <Button variant="primary" onClick={save}>Enregistrer le workflow</Button>
         </div>
@@ -460,6 +454,14 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
           </div>
         </div>
 
+        {/* Zoom en surimpression : dans la barre d'outils, il faisait passer
+            Enregistrer à la ligne dès 1280 px de large. */}
+        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5 shadow-sm dark:border-field">
+          <Button variant="ghost" aria-label="Dézoomer" onClick={() => setZoom((z) => Math.max(0.4, z / 1.2))}>−</Button>
+          <span className="w-10 text-center text-xs text-ink-faint">{Math.round(zoom * 100)}%</span>
+          <Button variant="ghost" aria-label="Zoomer" onClick={() => setZoom((z) => Math.min(1.6, z * 1.2))}>+</Button>
+          <Button variant="ghost" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Recentrer</Button>
+        </div>
         {(selected === 'trigger' || selectedNode) && (
           <div className="absolute right-2 top-2 bottom-2 w-72 overflow-y-auto rounded-lg border border-line bg-surface p-3 shadow-lg dark:border-field">
             {selected === 'trigger' ? (
