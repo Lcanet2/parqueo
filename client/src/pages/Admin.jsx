@@ -78,10 +78,24 @@ export default function Admin() {
       <div id={`panneau-${tab}`} role="tabpanel" aria-labelledby={`onglet-${tab}`} tabIndex={-1} className="focus:outline-none">
         {tab === 'users' && <UsersTab />}
         {tab === 'teams' && (
-          <SimpleListTab endpoint="/teams" label="équipe" placeholder="Ex. : Support N2" allowNone />
+          <SimpleListTab
+            endpoint="/teams"
+            label="équipe"
+            placeholder="Ex. : Support N2"
+            withoutMoveNotice="Ses tickets et ses comptes resteront sans équipe."
+          />
         )}
         {tab === 'categories' && (
-          <SimpleListTab endpoint="/categories" label="catégorie" placeholder="Ex. : Réseau" />
+          <SimpleListTab
+            endpoint="/categories"
+            label="catégorie"
+            placeholder="Ex. : Réseau"
+            withoutMoveNotice={
+              'Ses tickets, avec leurs commentaires et pièces jointes, et ses formulaires seront ' +
+              "SUPPRIMÉS DÉFINITIVEMENT. Les articles d'aide resteront, sans catégorie.\n\n" +
+              'Cette action est irréversible.'
+            }
+          />
         )}
         {tab === 'forms' && <FormsTab />}
         {tab === 'workflows' && <WorkflowsTab />}
@@ -397,7 +411,7 @@ function UsersTab() {
                 </div>
               </Field>
             </div>
-            {panelMsg && <p className="text-sm text-status-resolved">{panelMsg}</p>}
+            {panelMsg && <p className="text-sm text-positive">{panelMsg}</p>}
             <ErrorText>{error}</ErrorText>
           </div>
         </Card>
@@ -417,7 +431,7 @@ function ImportResults({ data }) {
   return (
     <div className="space-y-3 rounded-md border border-line bg-canvas p-3">
       <p className="text-sm">
-        <span className="font-medium text-status-resolved">{summary.created} créé(s)</span>, {summary.skipped}{' '}
+        <span className="font-medium text-positive">{summary.created} créé(s)</span>, {summary.skipped}{' '}
         ignoré(s), {summary.errors} erreur(s) sur {summary.total}.
       </p>
       {withPw.length > 0 && (
@@ -453,9 +467,9 @@ function ImportResults({ data }) {
   );
 }
 
-// allowNone : les éléments rattachés peuvent rester sans valeur (équipe), au lieu
-// d'être obligatoirement déplacés (catégorie, exigée par tickets et formulaires).
-function SimpleListTab({ endpoint, label, placeholder, allowNone = false }) {
+// withoutMoveNotice : ce qu'il advient de ce qui dépend d'un élément supprimé
+// sans être déplacé, affiché dans la confirmation.
+function SimpleListTab({ endpoint, label, placeholder, withoutMoveNotice }) {
   const [items, setItems] = useState(null);
   const [name, setName] = useState('');
   const [search, setSearch] = useState('');
@@ -502,16 +516,28 @@ function SimpleListTab({ endpoint, label, placeholder, allowNone = false }) {
     }
   }
 
-  async function moveAndRemove(e) {
-    e.preventDefault();
+  // target : id de destination, ou « none » pour supprimer sans déplacer.
+  async function forceRemove(target) {
     setError(null);
     try {
-      await api.delete(`${endpoint}/${moving.item.id}?reassignTo=${encodeURIComponent(moving.target)}`);
+      await api.delete(`${endpoint}/${moving.item.id}?reassignTo=${encodeURIComponent(target)}`);
       setMoving(null);
       load();
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  function moveAndRemove(e) {
+    e.preventDefault();
+    forceRemove(moving.target);
+  }
+
+  function removeWithoutMove() {
+    const ok = confirm(
+      `Supprimer « ${moving.item.name} » sans déplacer ?\n\n${moving.message}\n${withoutMoveNotice}`
+    );
+    if (ok) forceRemove('none');
   }
 
   return (
@@ -574,7 +600,6 @@ function SimpleListTab({ endpoint, label, placeholder, allowNone = false }) {
                         <option value="" disabled>
                           Choisir…
                         </option>
-                        {allowNone && <option value="none">Aucune {label}</option>}
                         {items
                           .filter((o) => o.id !== i.id)
                           .map((o) => (
@@ -583,10 +608,11 @@ function SimpleListTab({ endpoint, label, placeholder, allowNone = false }) {
                             </option>
                           ))}
                       </Select>
-                      <Button variant="danger" type="submit">
-                        Déplacer et supprimer
+                      <Button type="submit">Déplacer et supprimer</Button>
+                      <Button variant="danger" type="button" onClick={removeWithoutMove}>
+                        Supprimer sans déplacer
                       </Button>
-                      <Button type="button" onClick={() => setMoving(null)}>
+                      <Button variant="ghost" type="button" onClick={() => setMoving(null)}>
                         Annuler
                       </Button>
                     </div>

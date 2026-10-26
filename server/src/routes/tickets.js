@@ -1,7 +1,6 @@
 import { Router } from '../lib/router.js';
 import multer from 'multer';
 import path from 'node:path';
-import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
@@ -13,6 +12,7 @@ import { text, tropLong, LIMITS, entierBorne } from '../lib/input.js';
 import { statutApresAssignation } from '../lib/statut.js';
 import { ticketStats, ticketListes } from '../lib/stats.js';
 import { onTicketCreated, onTicketUpdated } from '../services/workflowEngine.js';
+import { effacerFichiers } from '../services/fichiers.js';
 import { describeGate } from '../lib/workflowUtils.js';
 import { STATUS_LABELS } from '../lib/labels.js';
 import {
@@ -471,18 +471,6 @@ router.get('/:id/attachments/:attachmentId', async (req, res) => {
 
   res.download(path.resolve(attachment.storedPath), attachment.filename);
 });
-
-// Supprime les fichiers d'une liste de pièces jointes. Un fichier déjà absent
-// n'est pas une erreur : la ligne en base fait foi.
-async function effacerFichiers(attachments) {
-  for (const a of attachments) {
-    try {
-      await fs.unlink(path.resolve(a.storedPath));
-    } catch (err) {
-      if (err.code !== 'ENOENT') console.error(`[pièces jointes] ${a.storedPath} :`, err.message);
-    }
-  }
-}
 
 // Suppression définitive d'un ticket (droit à l'effacement). Les commentaires,
 // pièces jointes et exécutions de workflow partent en cascade ; les fichiers sur

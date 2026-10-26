@@ -143,6 +143,27 @@ describe('suppressions', () => {
     assert.equal(apres.steps[0].config.value, String(cible.id));
   });
 
+  test('supprimer une catégorie sans déplacer emporte ses tickets et formulaires', async () => {
+    const cat = await prisma.category.create({ data: { name: 'Sans déplacer' } });
+    const ticket = await api.post('/api/tickets', {
+      token: t.user,
+      body: { title: 'x', description: 'y', categoryId: cat.id },
+    });
+    await prisma.ticketComment.create({ data: { ticketId: ticket.data.id, authorId: ctx.user.id, body: 'c' } });
+    const form = await prisma.form.create({ data: { name: 'F', categoryId: cat.id } });
+    const article = await prisma.kbArticle.create({
+      data: { title: 'A', body: 'b', categoryId: cat.id, authorId: ctx.admin.id },
+    });
+
+    const r = await api.del(`/api/categories/${cat.id}?reassignTo=none`, { token: t.admin });
+    assert.equal(r.status, 204);
+    assert.equal(await prisma.category.findUnique({ where: { id: cat.id } }), null);
+    assert.equal(await prisma.ticket.findUnique({ where: { id: ticket.data.id } }), null);
+    assert.equal(await prisma.ticketComment.count({ where: { ticketId: ticket.data.id } }), 0);
+    assert.equal(await prisma.form.findUnique({ where: { id: form.id } }), null);
+    assert.equal((await prisma.kbArticle.findUnique({ where: { id: article.id } })).categoryId, null);
+  });
+
   test('supprimer une équipe utilisée en déplaçant tickets, comptes et workflows', async () => {
     const ancienne = await prisma.team.create({ data: { name: 'Ancienne' } });
     const cible = await prisma.team.create({ data: { name: 'Cible' } });

@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { text, tropLong, LIMITS } from '../lib/input.js';
+import { effacerFichiers } from '../services/fichiers.js';
 
 // Catégories et équipes : lecture pour tous (formulaires), écriture admin.
 const router = Router();
@@ -36,8 +37,10 @@ router.post('/teams', requireRole('admin'), async (req, res) => {
 // Suppression d'un référentiel. Tant qu'il est utilisé, l'API refuse (409) et
 // dit par quoi ; l'interface propose alors de tout déplacer ailleurs :
 // ?reassignTo=<id> reporte tickets, formulaires, comptes… et les références des
-// workflows sur la cible, puis supprime, le tout dans une transaction. Pour une
-// équipe, ?reassignTo=none laisse tickets et comptes sans équipe.
+// workflows sur la cible, puis supprime, le tout dans une transaction.
+// ?reassignTo=none supprime sans déplacer : une équipe laisse tickets et comptes
+// sans équipe ; une catégorie, obligatoire sur les tickets et les formulaires,
+// les emporte avec elle (l'interface prévient que c'est définitif).
 
 const pluriel = (n, mot) => n && `${n} ${mot}${n > 1 ? 's' : ''}`;
 
@@ -85,7 +88,26 @@ router.delete('/categories/:id', requireRole('admin'), async (req, res) => {
     return res.status(204).end();
   }
 
-  // Les tickets et formulaires exigent une catégorie : pas de « none » ici.
+  if (reassignTo === 'none') {
+    const attachments = await prisma.attachment.findMany({
+      where: { ticket: { categoryId: id } },
+      select: { storedPath: true },
+    });
+    await prisma.$transaction(async (tx) => {
+      // Commentaires, pièces jointes et exécutions de workflow suivent en cascade.
+      await tx.ticket.deleteMany({ where: { categoryId: id } });
+      await tx.form.deleteMany({ where: { categoryId: id } });
+      // Un article d'aide reste utile sans catégorie (elle y est facultative).
+      await tx.kbArticle.updateMany({ where: { categoryId: id }, data: { categoryId: null } });
+      await tx.category.delete({ where: { id } });
+    });
+    await effacerFichiers(attachments);
+    console.log(
+      `[catégories] « ${category.name} » supprimée avec ${tickets} ticket(s) et ${forms} formulaire(s) par l'utilisateur ${req.user.sub}`
+    );
+    return res.status(204).end();
+  }
+
   const to = Number(reassignTo);
   if (!Number.isInteger(to) || to === id || !(await prisma.category.findUnique({ where: { id: to } }))) {
     return res.status(400).json({ error: 'Catégorie de destination invalide' });
