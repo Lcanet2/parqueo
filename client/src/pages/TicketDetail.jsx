@@ -35,8 +35,11 @@ const REMOVED_BADGE = { fg: 'var(--color-status-closed)', bg: 'var(--color-statu
 
 // Découpe un événement brut en segments texte / badges colorés :
 // changements de statut et priorité, assignations et affectations d'équipe.
+// La cause éventuelle, stockée entre parenthèses (« workflow « … » »,
+// « prise en charge », « clôture automatique… »), n'est pas affichée : le fil
+// montre l'action, pas ce qui l'a déclenchée.
 function parseEvent(body) {
-  let m = body.match(/^(Statut changé|Priorité changée) : (\w+) → (\w+)(?: \((.+)\))?$/);
+  let m = body.match(/^(Statut changé|Priorité changée) : (\w+) → (\w+)(?: \(.+\))?$/);
   if (m) {
     const dict = m[1] === 'Statut changé' ? TICKET_STATUS : TICKET_PRIORITY;
     const badge = (key) => dict[key] ?? { label: key, ...REMOVED_BADGE };
@@ -45,23 +48,20 @@ function parseEvent(body) {
       { badge: badge(m[2]) },
       { text: '→' },
       { badge: badge(m[3]) },
-      ...(m[4] ? [{ text: `(${m[4]})` }] : []),
     ];
   }
-  m = body.match(/^Assigné à (.+?)(?: \((.+)\))?$/);
+  m = body.match(/^Assigné à (.+?)(?: \(.+\))?$/);
   if (m) {
     return [
       { text: 'Assigné à' },
       { badge: { label: m[1], ...ASSIGNEE_BADGE } },
-      ...(m[2] ? [{ text: `(${m[2]})` }] : []),
     ];
   }
-  m = body.match(/^Affecté à l'équipe (.+?)(?: \((.+)\))?$/);
+  m = body.match(/^Affecté à l'équipe (.+?)(?: \(.+\))?$/);
   if (m) {
     return [
       { text: "Affecté à l'équipe" },
       { badge: { label: m[1], ...TEAM_BADGE } },
-      ...(m[2] ? [{ text: `(${m[2]})` }] : []),
     ];
   }
   if (body === 'Assignation retirée') {
