@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { Button, Input, Select, Textarea, Field, ErrorText } from './ui.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../lib/labels.js';
@@ -86,6 +86,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
   const [zoom, setZoom] = useState(1);
   const [selected, setSelected] = useState('trigger');
   const [connecting, setConnecting] = useState(null); // { from, port, x, y }
+  const [selectedConn, setSelectedConn] = useState(null); // { from, port } — le fil sélectionné
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [error, setError] = useState(null);
 
@@ -109,6 +110,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
     drag.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y };
     wrapRef.current.setPointerCapture(e.pointerId);
     setSelected(null);
+    setSelectedConn(null);
     setPaletteOpen(false);
   }
   function startNodeDrag(e, key) {
@@ -118,6 +120,15 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
     drag.current = { kind: 'node', key, ox: p.x - pos.x, oy: p.y - pos.y };
     wrapRef.current.setPointerCapture(e.pointerId);
     setSelected(key);
+    setSelectedConn(null);
+  }
+  // Un clic sur un fil le sélectionne : il s'épaissit et un bouton × apparaît
+  // en son milieu. Suppr ou Retour arrière le supprime aussi.
+  function selectConn(e, c) {
+    e.stopPropagation();
+    setSelectedConn({ from: c.from, port: c.port });
+    setSelected(null);
+    setPaletteOpen(false);
   }
   function startWire(e, from, port) {
     e.stopPropagation();
@@ -168,6 +179,10 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
   }
 
   // --- Graphe ---
+  function removeConn({ from, port }) {
+    setModel((m) => ({ ...m, conns: m.conns.filter((c) => !(c.from === from && c.port === port)) }));
+    setSelectedConn(null);
+  }
   function setConn(from, port, to) {
     setModel((m) => ({
       ...m,
@@ -248,6 +263,25 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
   }
 
   const selectedNode = model.nodes.find((n) => n.key === selected);
+  // Le fil sélectionné peut disparaître (bloc supprimé, sortie rebranchée) :
+  // on ne garde la sélection que s'il existe encore.
+  const selConn = selectedConn && model.conns.find((c) => c.from === selectedConn.from && c.port === selectedConn.port);
+
+  useEffect(() => {
+    if (!selConn) return;
+    function onKey(e) {
+      // Pas pendant une saisie : Retour arrière doit effacer du texte, pas un fil.
+      if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        removeConn(selConn);
+      } else if (e.key === 'Escape') {
+        setSelectedConn(null);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selConn]);
 
   return (
     <div className="space-y-3">
@@ -326,6 +360,8 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
                   a={outPos(c.from, c.port)}
                   b={inPos(c.to)}
                   color={c.port === 'yes' ? 'var(--color-status-resolved)' : c.port === 'no' ? 'var(--color-negative)' : 'var(--color-ink-faint)'}
+                  selected={selConn === c}
+                  onSelect={(e) => selectConn(e, c)}
                 />
               ))}
               {connecting && <Wire a={outPos(connecting.from, connecting.port)} b={{ x: connecting.x, y: connecting.y }} dashed />}
@@ -343,6 +379,27 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
               onOut={startWire}
               fromKey="trigger"
             />
+
+            {selConn && (() => {
+              // Le milieu d'une courbe de Bézier symétrique est le milieu de ses
+              // deux extrémités.
+              const a = outPos(selConn.from, selConn.port);
+              const b = inPos(selConn.to);
+              return (
+                <button
+                  type="button"
+                  autoFocus
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => removeConn(selConn)}
+                  className="absolute z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-ink-soft shadow-sm hover:border-negative hover:text-negative dark:border-field"
+                  style={{ left: (a.x + b.x) / 2 - 12, top: (a.y + b.y) / 2 - 12 }}
+                  aria-label="Supprimer ce lien"
+                  title="Supprimer ce lien (Suppr)"
+                >
+                  <IconX size={12} />
+                </button>
+              );
+            })()}
 
             {model.nodes.map((n) => {
               const spec = STEP_CATALOG[n.type];
@@ -396,7 +453,8 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
       </div>
 
       <p className="text-xs text-ink-faint">
-        Glissez les blocs, tirez un fil depuis un point de sortie vers un autre bloc pour définir l'ordre. Un
+        Glissez les blocs, tirez un fil depuis un point de sortie vers un autre bloc pour définir l'ordre ;
+        cliquez sur un fil pour le supprimer. Un
         bloc « condition » a deux sorties <span className="text-status-resolved">oui</span> /{' '}
         <span className="text-negative">non</span>. Molette pour zoomer, glissez le fond pour vous déplacer.
       </p>
@@ -409,16 +467,34 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
   );
 }
 
-function Wire({ a, b, dashed, color = 'var(--color-ink-faint)' }) {
+// `onSelect` : le fil devient cliquable. Un trait de 2 px ne s'attrape pas à la
+// souris, encore moins au doigt : un second tracé invisible de 14 px, posé
+// dessus, reçoit le clic (le calque SVG, lui, laisse passer le pointeur).
+function Wire({ a, b, dashed, color = 'var(--color-ink-faint)', selected, onSelect }) {
   const dx = Math.max(40, Math.abs(b.x - a.x) / 2);
+  const d = `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
   return (
-    <path
-      d={`M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`}
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeDasharray={dashed ? '5 4' : undefined}
-    />
+    <g className="group">
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth={selected ? 3.5 : 2}
+        strokeDasharray={dashed ? '5 4' : undefined}
+        className="transition-[stroke-width] group-hover:[stroke-width:3.5]"
+      />
+      {onSelect && (
+        <path
+          d={d}
+          fill="none"
+          stroke="transparent"
+          strokeWidth="14"
+          className="cursor-pointer"
+          style={{ pointerEvents: 'stroke' }}
+          onPointerDown={onSelect}
+        />
+      )}
+    </g>
   );
 }
 
