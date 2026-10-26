@@ -77,7 +77,9 @@ export default function Admin() {
 
       <div id={`panneau-${tab}`} role="tabpanel" aria-labelledby={`onglet-${tab}`} tabIndex={-1} className="focus:outline-none">
         {tab === 'users' && <UsersTab />}
-        {tab === 'teams' && <SimpleListTab endpoint="/teams" label="équipe" placeholder="Ex. : Support N2" />}
+        {tab === 'teams' && (
+          <SimpleListTab endpoint="/teams" label="équipe" placeholder="Ex. : Support N2" allowNone />
+        )}
         {tab === 'categories' && (
           <SimpleListTab endpoint="/categories" label="catégorie" placeholder="Ex. : Réseau" />
         )}
@@ -451,11 +453,15 @@ function ImportResults({ data }) {
   );
 }
 
-function SimpleListTab({ endpoint, label, placeholder }) {
+// allowNone : les éléments rattachés peuvent rester sans valeur (équipe), au lieu
+// d'être obligatoirement déplacés (catégorie, exigée par tickets et formulaires).
+function SimpleListTab({ endpoint, label, placeholder, allowNone = false }) {
   const [items, setItems] = useState(null);
   const [name, setName] = useState('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState(null);
+  // Suppression refusée car l'élément sert encore : { item, message, target }.
+  const [moving, setMoving] = useState(null);
 
   const load = useCallback(() => {
     api.get(endpoint).then(setItems).catch((err) => setError(err.message));
@@ -475,6 +481,33 @@ function SimpleListTab({ endpoint, label, placeholder }) {
     try {
       await api.post(endpoint, { name });
       setName('');
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  // L'API refuse (409) tant que l'élément sert encore, en disant à quoi : on
+  // propose alors de tout déplacer vers une autre valeur avant de supprimer.
+  async function remove(item) {
+    if (!confirm(`Supprimer la ${label} « ${item.name} » ?`)) return;
+    setError(null);
+    setMoving(null);
+    try {
+      await api.delete(`${endpoint}/${item.id}`);
+      load();
+    } catch (err) {
+      if (err.status === 409) setMoving({ item, message: err.message, target: '' });
+      else setError(err.message);
+    }
+  }
+
+  async function moveAndRemove(e) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api.delete(`${endpoint}/${moving.item.id}?reassignTo=${encodeURIComponent(moving.target)}`);
+      setMoving(null);
       load();
     } catch (err) {
       setError(err.message);
@@ -517,8 +550,48 @@ function SimpleListTab({ endpoint, label, placeholder }) {
         <>
           <ul>
             {paged.pageRows.map((i) => (
-              <li key={i.id} className="border-b border-line px-4 py-2.5 text-sm last:border-0">
+              <li
+                key={i.id}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-1.5 pr-2 pl-4 text-sm last:border-0"
+              >
                 {i.name}
+                <Button variant="ghost" aria-label={`Supprimer ${i.name}`} onClick={() => remove(i)}>
+                  Supprimer
+                </Button>
+                {moving?.item.id === i.id && (
+                  <form onSubmit={moveAndRemove} className="basis-full space-y-2 rounded-md bg-canvas p-3">
+                    <p className="text-ink-soft">
+                      {moving.message} Où les déplacer avant de supprimer « {i.name} » ?
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Select
+                        aria-label="Déplacer vers"
+                        value={moving.target}
+                        onChange={(e) => setMoving({ ...moving, target: e.target.value })}
+                        className="w-auto"
+                        required
+                      >
+                        <option value="" disabled>
+                          Choisir…
+                        </option>
+                        {allowNone && <option value="none">Aucune {label}</option>}
+                        {items
+                          .filter((o) => o.id !== i.id)
+                          .map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}
+                            </option>
+                          ))}
+                      </Select>
+                      <Button variant="danger" type="submit">
+                        Déplacer et supprimer
+                      </Button>
+                      <Button type="button" onClick={() => setMoving(null)}>
+                        Annuler
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

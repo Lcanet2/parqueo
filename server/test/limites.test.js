@@ -113,6 +113,60 @@ describe('suppressions', () => {
     assert.match(r.data.error, /compte/);
   });
 
+  test('supprimer une catégorie utilisée en déplaçant tickets, formulaires et workflows', async () => {
+    const ancienne = await prisma.category.create({ data: { name: 'Ancienne' } });
+    const cible = await prisma.category.create({ data: { name: 'Cible' } });
+    const ticket = await api.post('/api/tickets', {
+      token: t.user,
+      body: { title: 'x', description: 'y', categoryId: ancienne.id },
+    });
+    const form = await prisma.form.create({ data: { name: 'F', categoryId: ancienne.id } });
+    const wf = await prisma.workflow.create({
+      data: {
+        name: 'W',
+        trigger: 'ticket_created',
+        conditions: { categoryId: ancienne.id },
+        steps: { create: { key: 'c', type: 'condition', config: { field: 'category', value: String(ancienne.id) } } },
+      },
+    });
+
+    const invalide = await api.del(`/api/categories/${ancienne.id}?reassignTo=${ancienne.id}`, { token: t.admin });
+    assert.equal(invalide.status, 400);
+    const r = await api.del(`/api/categories/${ancienne.id}?reassignTo=${cible.id}`, { token: t.admin });
+    assert.equal(r.status, 204);
+
+    assert.equal(await prisma.category.findUnique({ where: { id: ancienne.id } }), null);
+    assert.equal((await prisma.ticket.findUnique({ where: { id: ticket.data.id } })).categoryId, cible.id);
+    assert.equal((await prisma.form.findUnique({ where: { id: form.id } })).categoryId, cible.id);
+    const apres = await prisma.workflow.findUnique({ where: { id: wf.id }, include: { steps: true } });
+    assert.equal(apres.conditions.categoryId, cible.id);
+    assert.equal(apres.steps[0].config.value, String(cible.id));
+  });
+
+  test('supprimer une équipe utilisée en déplaçant tickets, comptes et workflows', async () => {
+    const ancienne = await prisma.team.create({ data: { name: 'Ancienne' } });
+    const cible = await prisma.team.create({ data: { name: 'Cible' } });
+    const membre = await prisma.user.create({ data: { email: 'membre@test.local', name: 'M', teamId: ancienne.id } });
+    const step = await prisma.workflowStep.create({
+      data: {
+        key: 'a',
+        type: 'assign_team',
+        config: { teamId: ancienne.id },
+        workflow: { create: { name: 'W2', trigger: 'ticket_created' } },
+      },
+    });
+
+    const r = await api.del(`/api/teams/${ancienne.id}?reassignTo=${cible.id}`, { token: t.admin });
+    assert.equal(r.status, 204);
+    assert.equal((await prisma.user.findUnique({ where: { id: membre.id } })).teamId, cible.id);
+    assert.equal((await prisma.workflowStep.findUnique({ where: { id: step.id } })).config.teamId, cible.id);
+
+    // « none » : les comptes restent sans équipe.
+    const r2 = await api.del(`/api/teams/${cible.id}?reassignTo=none`, { token: t.admin });
+    assert.equal(r2.status, 204);
+    assert.equal((await prisma.user.findUnique({ where: { id: membre.id } })).teamId, null);
+  });
+
   test('l’auteur d’un envoi retire sa pièce jointe, un tiers non', async () => {
     const c = await api.post('/api/tickets', { token: t.user, body: { title: 'x', description: 'y', categoryId: ctx.category.id } });
     const pj = await prisma.attachment.create({
