@@ -120,7 +120,7 @@ export default function Account() {
 
             <ErrorText>{error}</ErrorText>
             {done && (
-              <p role="status" className="text-sm text-status-resolved">
+              <p role="status" className="text-sm text-positive">
                 Mot de passe mis à jour.
               </p>
             )}

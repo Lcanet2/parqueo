@@ -359,7 +359,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
                   key={i}
                   a={outPos(c.from, c.port)}
                   b={inPos(c.to)}
-                  color={c.port === 'yes' ? 'var(--color-status-resolved)' : c.port === 'no' ? 'var(--color-negative)' : 'var(--color-ink-faint)'}
+                  color={c.port === 'yes' ? 'var(--color-positive)' : c.port === 'no' ? 'var(--color-negative)' : 'var(--color-ink-faint)'}
                   selected={selConn === c}
                   onSelect={(e) => selectConn(e, c)}
                 />
@@ -455,7 +455,7 @@ export default function WorkflowCanvas({ draft, refs, onSaved, onCancel }) {
       <p className="text-xs text-ink-faint">
         Glissez les blocs, tirez un fil depuis un point de sortie vers un autre bloc pour définir l'ordre ;
         cliquez sur un fil pour le supprimer. Un
-        bloc « condition » a deux sorties <span className="text-status-resolved">oui</span> /{' '}
+        bloc « condition » a deux sorties <span className="text-positive">oui</span> /{' '}
         <span className="text-negative">non</span>. Molette pour zoomer, glissez le fond pour vous déplacer.
       </p>
 
@@ -566,7 +566,7 @@ function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, ou
           {o.label && (
             <span
               className="mr-2 text-[11px] font-semibold"
-              style={{ color: o.port === 'yes' ? 'var(--color-status-resolved)' : 'var(--color-negative)' }}
+              style={{ color: o.port === 'yes' ? 'var(--color-positive)' : 'var(--color-negative)' }}
             >
               {o.label}
             </span>
@@ -575,7 +575,7 @@ function NodeBox({ pos, accent, Icon, title, subtitle, gate, selected, hasIn, ou
             onPointerDown={(e) => onOut(e, fromKey, o.port)}
             title="Tirer un fil"
             className="h-3.5 w-3.5 cursor-crosshair rounded-full border-2 border-surface hover:scale-125"
-            style={{ background: o.port === 'yes' ? 'var(--color-status-resolved)' : o.port === 'no' ? 'var(--color-negative)' : 'var(--color-accent)' }}
+            style={{ background: o.port === 'yes' ? 'var(--color-positive)' : o.port === 'no' ? 'var(--color-negative)' : 'var(--color-accent)' }}
           />
         </span>
       ))}
@@ -843,7 +843,7 @@ function ConditionConfig({ cfg, refs, onConfig }) {
         </Field>
       )}
       <p className="text-xs text-ink-faint">
-        Le ticket suit la sortie <span className="text-status-resolved">oui</span> si le test est vrai, sinon{' '}
+        Le ticket suit la sortie <span className="text-positive">oui</span> si le test est vrai, sinon{' '}
         <span className="text-negative">non</span>.
       </p>
     </div>

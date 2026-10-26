@@ -7,7 +7,7 @@ import { TICKET_STATUS, TICKET_PRIORITY, ASSET_TYPE, ASSET_STATUS, formatDate } 
 // Tokens (thème clair/sombre) plutôt que hex figés. Une seule teinte par
 // graphique : « créés », la série qui demande du travail, porte le bleu panneau ;
 // « clôturés » est la comparaison, en gris.
-const SERIES = { created: 'var(--color-accent)', closed: 'var(--color-status-closed)' };
+const SERIES = { created: 'var(--color-accent)', closed: 'var(--color-ink-soft)' };
 
 // ---------- Briques graphiques partagées ----------
 

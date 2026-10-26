@@ -179,7 +179,7 @@ export default function Assets() {
           plusieurs secondes et son résultat apparaît loin du bouton cliqué. */}
       {syncMsg &&
         (syncMsg.ok ? (
-          <p role="status" className="text-sm text-status-resolved">
+          <p role="status" className="text-sm text-positive">
             {syncMsg.text}
           </p>
         ) : (

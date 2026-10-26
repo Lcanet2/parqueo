@@ -111,7 +111,7 @@ export default function Settings() {
         actions={
           <span
             role="status"
-            className={`flex items-center gap-1 text-xs text-status-resolved transition-opacity ${
+            className={`flex items-center gap-1 text-xs text-positive transition-opacity ${
               saved ? 'opacity-100' : 'opacity-0'
             }`}
           >

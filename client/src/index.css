@@ -99,20 +99,25 @@
   --color-warning: #9a5b00;
   --color-warning-soft: #fff4dc;
 
-  /* États tickets — une seule famille de bleus pour ce qui est ouvert (le bleu
-     plein appelle l'action, le bleu nuit travaille, le bleu pâle est « parqué »
-     en attente), un vert pour le résolu, un gris pour le fermé. Cinq teintes
-     arc-en-ciel se lisaient comme une légende, pas comme un cycle de vie. */
-  --color-status-new: #1a4bc4;
+  /* Succès (enregistré, sortie « oui » d'un workflow, demandeur satisfait).
+     Séparé des états : « Résolu » ne porte plus de vert. */
+  --color-positive: #247b50;
+  --color-positive-soft: #e2f5e9;
+
+  /* États tickets — un dégradé d'un seul bleu qui suit le cycle de vie : clair
+     pour le ticket qui vient d'arriver, de plus en plus sombre jusqu'au fermé.
+     L'œil lit l'avancement sans légende. Les pastilles ne portent pas de texte ;
+     le plus clair tient 3.3:1 sur `canvas` (seuil des éléments graphiques). */
+  --color-status-new: #5d86e2;
   --color-status-new-bg: #e8eefc;
-  --color-status-progress: #0c2a66;
+  --color-status-progress: #3f6fd9;
   --color-status-progress-bg: #e3e8f2;
-  --color-status-waiting: #5f84d8; /* le trait de la pastille, jamais du texte : 3.6:1 */
-  --color-status-waiting-ink: #2f4f9a; /* le texte « En attente » sur sa teinte : 7:1 */
+  --color-status-waiting: #2652b5;
+  --color-status-waiting-ink: #2f4f9a; /* le texte des badges d'équipe sur leur teinte : 7:1 */
   --color-status-waiting-bg: #eef2fb;
-  --color-status-resolved: #247b50;
-  --color-status-resolved-bg: #e2f5e9;
-  --color-status-closed: #646a77;
+  --color-status-resolved: #183a85;
+  --color-status-resolved-bg: #e2e8f5;
+  --color-status-closed: #0d2150;
   --color-status-closed-bg: #eef0f4;
 
   /* Anneau de focus : l'encre, pas l'accent. L'accent signale déjà la sélection ;
@@ -166,16 +171,21 @@
   --color-warning: #e2a44a;
   --color-warning-soft: #2e2413;
 
-  --color-status-new: #7c9ff5;
+  --color-positive: #5fc28d;
+  --color-positive-soft: #15291e;
+
+  /* Même dégradé qu'en clair : du plus lumineux (nouveau) au plus éteint
+     (fermé), qui garde 3.4:1 sur la feuille sombre. */
+  --color-status-new: #b9cdfa;
   --color-status-new-bg: #1a2440;
-  --color-status-progress: #d5ddf2;
+  --color-status-progress: #8eabf0;
   --color-status-progress-bg: #262b36;
-  --color-status-waiting: #4a6bc0;
+  --color-status-waiting: #6f92e0;
   --color-status-waiting-ink: #a3bcf8;
   --color-status-waiting-bg: #1b2030;
-  --color-status-resolved: #5fc28d;
-  --color-status-resolved-bg: #15291e;
-  --color-status-closed: #9499a3;
+  --color-status-resolved: #5a7bcc;
+  --color-status-resolved-bg: #1b2236;
+  --color-status-closed: #4d68ad;
   --color-status-closed-bg: #22242a;
 
   --color-focus: #f1f2f4;

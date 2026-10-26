@@ -31,7 +31,7 @@ function translateEvent(body) {
 
 const ASSIGNEE_BADGE = { fg: 'var(--color-accent)', bg: 'var(--color-accent-soft)' };
 const TEAM_BADGE = { fg: 'var(--color-status-waiting-ink)', bg: 'var(--color-status-waiting-bg)' };
-const REMOVED_BADGE = { fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)' };
+const REMOVED_BADGE = { fg: 'var(--color-ink-soft)', bg: 'var(--color-status-closed-bg)' };
 
 // Découpe un événement brut en segments texte / badges colorés :
 // changements de statut et priorité, assignations et affectations d'équipe.
@@ -597,12 +597,12 @@ export default function TicketDetail() {
                       label={ticket.satisfaction === 1 ? 'Satisfait' : 'Insatisfait'}
                       fg={
                         ticket.satisfaction === 1
-                          ? 'var(--color-status-resolved)'
+                          ? 'var(--color-positive)'
                           : 'var(--color-accent)'
                       }
                       bg={
                         ticket.satisfaction === 1
-                          ? 'var(--color-status-resolved-bg)'
+                          ? 'var(--color-positive-soft)'
                           : 'var(--color-accent-soft)'
                       }
                     />
