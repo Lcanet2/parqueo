@@ -2,6 +2,8 @@
 // par défaut. Les layouts sont définis par rôle par l'administration
 // (API /settings/dashboard) et s'appliquent à tous les comptes du rôle.
 
+import { uid } from './uid.js';
+
 const OPEN = ['new', 'in_progress', 'waiting'];
 
 export const isOpen = (t) => OPEN.includes(t.status);
@@ -270,7 +272,6 @@ export function catalogForRole(role) {
 }
 
 // --- Layouts par défaut ---
-const uid = () => crypto.randomUUID();
 
 export function defaultLayout(role) {
   if (role === 'user') {

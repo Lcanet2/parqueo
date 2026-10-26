@@ -4,6 +4,7 @@ import { Button, Input, Select, Textarea, Field, ErrorText } from './ui.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../lib/labels.js';
 import { STEP_CATALOG, TRIGGERS, catalogFor, defaultStepConfig, CONDITION_FIELDS } from '../lib/workflowBlocks.js';
 import { IconZap, IconX } from './icons.jsx';
+import { uid } from '../lib/uid.js';
 
 // Éditeur de workflow en canvas façon n8n : blocs déplaçables reliés par des
 // fils, pan et zoom. Un bloc « condition » a deux sorties (oui / non). Le graphe
@@ -13,7 +14,6 @@ const NODE_W = 210;
 const PORT_Y = 22; // port d'entrée / sortie simple
 const YES_Y = 20; // sortie « oui » d'une condition
 const NO_Y = 48; // sortie « non » d'une condition
-const uid = () => crypto.randomUUID();
 
 const isBranch = (type) => STEP_CATALOG[type]?.branch;
 
