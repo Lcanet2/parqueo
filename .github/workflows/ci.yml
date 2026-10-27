@@ -210,9 +210,13 @@ jobs:
       # téléchargements donne le nombre d'installations, sans télémétrie.
       # Lecture : gh api repos/Lcanet2/parqueo/releases \
       #   --jq '[.[].assets[] | select(.name=="docker-compose.prod.yml").download_count] | add'
+      # Les notes sont le message du tag annoté. checkout ne récupère que le
+      # commit, d'où le fetch explicite du tag : sans lui, --notes-from-tag
+      # ne trouverait rien à lire.
       - name: Créer la Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
           gh release create "$GITHUB_REF_NAME" docker-compose.prod.yml \
-            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+            --title "Parqueo ${GITHUB_REF_NAME#v}" --notes-from-tag --verify-tag
