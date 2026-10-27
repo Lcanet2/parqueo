@@ -61,6 +61,26 @@ services:
       SSO_TENANT_ID: '${SSO_TENANT_ID:-}'
       SSO_CLIENT_ID: '${SSO_CLIENT_ID:-}'
       SSO_CLIENT_SECRET: '${SSO_CLIENT_SECRET:-}'
+      SSO_REDIRECT_URI: '${SSO_REDIRECT_URI:-}'
+      SSO_POST_LOGIN_URL: '${SSO_POST_LOGIN_URL:-}'
+      SSO_ALLOWED_DOMAINS: '${SSO_ALLOWED_DOMAINS:-}'
+      # Les défauts numériques sont ceux du code, pas une chaîne vide : il lit
+      # `?? 7` et `?? 6`, qui ne remplacent pas "", et Number("") vaut 0 — ce
+      # qui couperait la clôture automatique et la synchronisation Intune.
+      AUTO_CLOSE_DAYS: '${AUTO_CLOSE_DAYS:-7}'
+      INTUNE_ENABLED: '${INTUNE_ENABLED:-false}'
+      INTUNE_SYNC_HOURS: '${INTUNE_SYNC_HOURS:-6}'
+      SNMP_ENABLED: '${SNMP_ENABLED:-false}'
+      SNMP_RANGES: '${SNMP_RANGES:-}'
+      SNMP_COMMUNITY: '${SNMP_COMMUNITY:-public}'
+      SNMP_SCAN_HOURS: '${SNMP_SCAN_HOURS:-0}'
+      IMAP_HOST: '${IMAP_HOST:-}'
+      IMAP_PORT: '${IMAP_PORT:-993}'
+      IMAP_USER: '${IMAP_USER:-}'
+      IMAP_PASS: '${IMAP_PASS:-}'
+      IMAP_TLS: '${IMAP_TLS:-true}'
+      IMAP_POLL_SECONDS: '${IMAP_POLL_SECONDS:-60}'
+      IMAP_CATEGORY_ID: '${IMAP_CATEGORY_ID:-}'
     volumes:
       # Les pièces jointes vivent hors du conteneur : elles survivent aux
       # mises à jour d'image.
