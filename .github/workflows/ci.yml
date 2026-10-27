@@ -191,3 +191,28 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  release:
+    name: Release GitHub
+    runs-on: ubuntu-latest
+    # Après les images : la Release devient « latest », et install.sh y prend un
+    # docker-compose.yml qui tire l'image « latest » ; celle-ci doit déjà exister.
+    needs: [publier]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # install.sh télécharge cette pièce jointe : son compteur de
+      # téléchargements donne le nombre d'installations, sans télémétrie.
+      # Lecture : gh api repos/Lcanet2/parqueo/releases \
+      #   --jq '[.[].assets[] | select(.name=="docker-compose.prod.yml").download_count] | add'
+      - name: Créer la Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" docker-compose.prod.yml \
+            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

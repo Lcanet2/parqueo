@@ -14,7 +14,12 @@
 set -eu
 
 # Surchargeable pour un fork, un miroir interne ou une installation hors ligne.
-DEPOT_BRUT="${PARQUEO_SOURCE:-https://raw.githubusercontent.com/Lcanet2/parqueo/main}"
+# Par défaut, la configuration vient de la dernière Release GitHub plutôt que de
+# la branche main : GitHub compte les téléchargements de ses pièces jointes, ce
+# qui donne le nombre d'installations sans rien collecter. Pour un essai qui ne
+# doit pas être compté, pointer PARQUEO_SOURCE sur DEPOT_SECOURS.
+DEPOT_BRUT="${PARQUEO_SOURCE:-https://github.com/Lcanet2/parqueo/releases/latest/download}"
+DEPOT_SECOURS="https://raw.githubusercontent.com/Lcanet2/parqueo/main"
 REPERTOIRE="${PARQUEO_DIR:-parqueo}"
 DOMAINE=""
 
@@ -77,7 +82,14 @@ mkdir -p "$REPERTOIRE"
 cd "$REPERTOIRE"
 
 info "Téléchargement de la configuration…"
-telecharger "$DEPOT_BRUT/docker-compose.prod.yml" docker-compose.yml
+# Secours sur main si aucune Release n'est encore publiée (ou si GitHub les sert
+# mal) : une installation ne doit pas échouer pour une question de comptage.
+# Sans PARQUEO_SOURCE seulement : un miroir explicite ne retombe pas sur GitHub.
+if ! telecharger "$DEPOT_BRUT/docker-compose.prod.yml" docker-compose.yml 2>/dev/null; then
+  [ -z "${PARQUEO_SOURCE:-}" ] \
+    || abandon "Impossible de télécharger $DEPOT_BRUT/docker-compose.prod.yml"
+  telecharger "$DEPOT_SECOURS/docker-compose.prod.yml" docker-compose.yml
+fi
 
 if [ -f .env ]; then
   # Réinstallation : on ne réécrit pas les secrets, cela invaliderait toutes les
