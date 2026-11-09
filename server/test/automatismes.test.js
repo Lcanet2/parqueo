@@ -108,12 +108,14 @@ describe('clôture automatique', () => {
     );
   });
 
-  test('un message du demandeur repousse la clôture', async () => {
+  test('un message sur un ticket résolu repousse la clôture', async () => {
+    // Message du technicien : celui du demandeur rouvrirait le ticket (voir
+    // reouverture.test.js), on veut ici tester le seul délai.
     const t = await ticketResoluAncien(30);
-    const tokenUser = await login(api, ctx.user.email);
+    const tokenTech = await login(api, ctx.tech.email);
     const msg = await api.post(`/api/tickets/${t.id}/comments`, {
-      token: tokenUser,
-      body: { body: 'Toujours pas réglé' },
+      token: tokenTech,
+      body: { body: 'Je repasse vérifier lundi' },
     });
     assert.equal(msg.status, 201);
 

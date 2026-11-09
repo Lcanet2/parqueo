@@ -16,6 +16,7 @@ import {
 } from '../lib/inbound.js';
 import { LIMITS, tronque } from '../lib/input.js';
 import { onTicketCreated } from './workflowEngine.js';
+import { rouvrirSiDemandeur } from './reouverture.js';
 import { notifyTicketCreated, notifyCommentAdded } from './mailer.js';
 
 // Collecteur email : les messages envoyés à la boîte IMAP_USER deviennent des
@@ -121,6 +122,7 @@ export async function handleIncomingEmail({
         await saveAttachments(ticket.id, user.id, attachments);
       }
       notifyCommentAdded(ticket, comment);
+      if (!internal) await rouvrirSiDemandeur(ticket, user.id);
       console.log(`[collecteur] ${internal ? 'note interne' : 'réponse'} de ${sender} ajoutée au ticket #${ticket.id}`);
       return { action: 'comment', ticketId: ticket.id };
     }

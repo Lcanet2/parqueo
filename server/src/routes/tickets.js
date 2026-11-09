@@ -14,6 +14,7 @@ import { statutApresAssignation } from '../lib/statut.js';
 import { ticketStats, ticketListes } from '../lib/stats.js';
 import { onTicketCreated, onTicketUpdated } from '../services/workflowEngine.js';
 import { effacerFichiers } from '../services/fichiers.js';
+import { rouvrirSiDemandeur } from '../services/reouverture.js';
 import { describeGate } from '../lib/workflowUtils.js';
 import { STATUS_LABELS } from '../lib/labels.js';
 import {
@@ -508,6 +509,7 @@ router.post('/:id/comments', async (req, res) => {
   ]);
 
   notifyCommentAdded(ticket, comment);
+  if (!internal) await rouvrirSiDemandeur(ticket, req.user.sub);
 
   res.status(201).json(comment);
 });
