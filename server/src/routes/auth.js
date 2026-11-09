@@ -104,6 +104,46 @@ router.post('/login', async (req, res) => {
 
 // --- SSO Microsoft Entra ID (OIDC) ---
 
+// Lien entre le départ du flux et son retour, dans CE navigateur.
+//
+// Le state signé prouve que Parqueo a émis la demande, pas que c'est ce
+// navigateur qui l'a lancée. Sans ce lien, un attaquant démarrait un flux avec
+// son propre compte Microsoft, gardait l'URL de retour et la faisait ouvrir à
+// sa victime : celle-ci se retrouvait connectée au compte de l'attaquant, et
+// tout ce qu'elle saisissait ensuite (tickets, pièces jointes) lui revenait.
+// Le nonce du state est donc aussi posé dans un cookie ; au retour, les deux
+// doivent correspondre.
+//
+// SameSite=Lax : le cookie accompagne la redirection d'Entra vers le callback
+// (navigation de premier niveau en GET), jamais une requête tierce.
+const COOKIE_SSO = 'parqueo_sso';
+
+function cookieSso(req, valeur, maxAge) {
+  return [
+    `${COOKIE_SSO}=${valeur}`,
+    'Path=/api/auth/sso',
+    `Max-Age=${maxAge}`,
+    'HttpOnly',
+    'SameSite=Lax',
+    // req.secure suit X-Forwarded-Proto derrière le proxy (trust proxy).
+    ...(req.secure ? ['Secure'] : []),
+  ].join('; ');
+}
+
+function lireCookie(req, nom) {
+  for (const morceau of (req.headers.cookie ?? '').split(';')) {
+    const i = morceau.indexOf('=');
+    if (i > 0 && morceau.slice(0, i).trim() === nom) return morceau.slice(i + 1).trim();
+  }
+  return '';
+}
+
+const memeValeur = (a, b) => {
+  const x = Buffer.from(String(a));
+  const y = Buffer.from(String(b));
+  return x.length > 0 && x.length === y.length && crypto.timingSafeEqual(x, y);
+};
+
 // Démarre le flux : redirige vers Entra. Le state signé porte le nonce (anti-rejeu),
 // ce qui évite tout stockage de session côté serveur.
 router.get('/sso/login', async (req, res) => {
@@ -111,7 +151,9 @@ router.get('/sso/login', async (req, res) => {
   try {
     const nonce = newNonce();
     const state = jwt.sign({ nonce, purpose: 'sso' }, process.env.JWT_SECRET, { expiresIn: '10m' });
-    res.redirect(await buildAuthUrl({ state, nonce }));
+    const url = await buildAuthUrl({ state, nonce });
+    res.setHeader('Set-Cookie', cookieSso(req, nonce, 600));
+    res.redirect(url);
   } catch (err) {
     res.redirect(`${postLoginUrl()}?sso_error=${encodeURIComponent(err.message)}`);
   }
@@ -122,6 +164,10 @@ router.get('/sso/login', async (req, res) => {
 router.get('/sso/callback', async (req, res) => {
   const back = (params) => res.redirect(`${postLoginUrl()}?${params}`);
   if (!ssoEnabled()) return res.status(404).json({ error: 'SSO non configuré' });
+
+  // Usage unique, quelle que soit l'issue.
+  const nonceNavigateur = lireCookie(req, COOKIE_SSO);
+  res.setHeader('Set-Cookie', cookieSso(req, '', 0));
 
   const { code, state, error, error_description } = req.query;
   if (error) return back(`sso_error=${encodeURIComponent(error_description || error)}`);
@@ -136,6 +182,11 @@ router.get('/sso/callback', async (req, res) => {
       nonce = payload.nonce;
     } catch {
       return back('sso_error=Session+SSO+expirée,+réessayez');
+    }
+    // Ce retour doit conclure un flux lancé depuis ce navigateur (voir COOKIE_SSO).
+    if (!memeValeur(nonceNavigateur, nonce)) {
+      console.warn('[sso] retour refusé : il ne correspond à aucune connexion lancée depuis ce navigateur');
+      return back('sso_error=Connexion+non+initiée+depuis+ce+navigateur,+réessayez');
     }
 
     // 2. Échanger le code et vérifier le jeton d'identité.
