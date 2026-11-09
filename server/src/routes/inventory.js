@@ -41,7 +41,13 @@ function requireInventoryToken(req, res, next) {
 router.post('/', express.json({ limit: '5mb' }), requireInventoryToken, async (req, res) => {
   const result = await ingest(req.body ?? {}, { source: 'agent' });
   if (result.error) return res.status(400).json({ error: result.error });
-  res.status(result.action === 'created' ? 201 : 200).json(result);
+  // Accusé court : renvoyer l'actif entier faisait repartir vers l'agent tout
+  // le rapport qu'il venait d'envoyer (colonne raw).
+  const { id, name, source, lastSeenAt } = result.asset;
+  res.status(result.action === 'created' ? 201 : 200).json({
+    action: result.action,
+    asset: { id, name, source, lastSeenAt },
+  });
 });
 
 // POST /api/inventory/glpi — format natif de l'agent GLPI. Le corps peut être du

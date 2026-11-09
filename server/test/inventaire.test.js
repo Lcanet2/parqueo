@@ -82,6 +82,25 @@ describe('taille des rapports', () => {
     assert.equal(await prisma.softwareInstall.count(), 800);
   });
 
+  test('la liste des actifs et l’accusé de l’agent ne renvoient pas le rapport brut', async () => {
+    const recu = await api.post('/api/inventory', {
+      body: rapport(800),
+      headers: { 'X-Parqueo-Token': TOKEN },
+    });
+    assert.equal(recu.data.asset.raw, undefined, 'accusé : rapport renvoyé à l’agent');
+    assert.ok(octets(recu.data) < 1024, `accusé de ${octets(recu.data)} o`);
+
+    const liste = await api.get('/api/assets', { token: tokenAdmin });
+    assert.equal(liste.status, 200);
+    assert.equal(liste.data.length, 1);
+    assert.equal(liste.data[0].raw, undefined, 'liste : rapport brut servi');
+    assert.equal(liste.data[0].os, 'Windows 11 Pro 23H2');
+
+    // La fiche détaillée, elle, le garde.
+    const fiche = await api.get(`/api/assets/${liste.data[0].id}`, { token: tokenAdmin });
+    assert.ok(fiche.data.raw, 'fiche : rapport brut absent');
+  });
+
   test('un rapport au-delà de la limite de 5 Mo est refusé en 413', async () => {
     const body = rapport(40000);
     assert.ok(octets(body) > 5 * 1024 * 1024);

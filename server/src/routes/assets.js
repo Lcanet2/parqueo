@@ -14,6 +14,33 @@ const assetInclude = {
   assignedUser: { select: { id: true, name: true, email: true } },
 };
 
+// Colonnes de la liste : tout sauf `raw`. raw porte le rapport d'inventaire
+// complet (plusieurs centaines de Ko par poste remonté par l'agent GLPI) ; la
+// liste, chargée par le tableau de bord et la création de ticket, pesait
+// plusieurs dizaines de Mo sur un parc de quelques centaines de machines.
+// raw reste servi par la fiche d'un actif (GET /:id).
+const assetListSelect = {
+  id: true,
+  name: true,
+  type: true,
+  location: true,
+  purchaseDate: true,
+  status: true,
+  assignedUserId: true,
+  createdAt: true,
+  uuid: true,
+  serial: true,
+  source: true,
+  lastSeenAt: true,
+  manufacturer: true,
+  model: true,
+  os: true,
+  cpu: true,
+  ramMb: true,
+  diskGb: true,
+  ...assetInclude,
+};
+
 router.use(authRequired);
 
 // L'accès des utilisateurs finals à l'inventaire est débrayable dans Paramètres.
@@ -44,7 +71,7 @@ router.get('/', async (req, res) => {
 
   const assets = await prisma.asset.findMany({
     where,
-    include: assetInclude,
+    select: assetListSelect,
     orderBy: { createdAt: 'desc' },
   });
   res.json(assets);
