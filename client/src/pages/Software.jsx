@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import {
@@ -14,12 +14,35 @@ import {
 import { IconX } from '../components/icons.jsx';
 import { useResource } from '../lib/useResource.js';
 import DataTable from '../components/DataTable.jsx';
+import Combobox from '../components/Combobox.jsx';
 import { ASSET_TYPE, ASSET_STATUS } from '../lib/labels.js';
+
+// Filtre de la colonne « Postes » : par rareté. Un logiciel présent sur un seul
+// poste est souvent le plus intéressant (installation sauvage, licence isolée) ;
+// « aucune » repère les entrées du catalogue dont tous les postes ont disparu.
+const TRANCHES_POSTES = [
+  { value: '0', label: 'Aucune installation', test: (s) => s.installs === 0 },
+  { value: '1', label: 'Un seul poste', test: (s) => s.installs === 1 },
+  { value: '2-10', label: '2 à 10 postes', test: (s) => s.installs >= 2 && s.installs <= 10 },
+  { value: 'gt10', label: 'Plus de 10 postes', test: (s) => s.installs > 10 },
+];
 
 // Catalogue de logiciels du parc (technicien/admin). La liste montre le nombre
 // d'installations ; sélectionner un logiciel détaille les postes concernés.
+// Choisir un poste restreint le catalogue à ce qui y est installé.
 export default function Software() {
-  const { data: list, error, reload } = useResource(() => api.get('/software'), []);
+  const [assetId, setAssetId] = useState('');
+  const [assets, setAssets] = useState([]);
+  const { data: list, error, loading, reload } = useResource(
+    () => api.get(assetId ? `/software?assetId=${assetId}` : '/software'),
+    [assetId]
+  );
+
+  useEffect(() => {
+    // Liste des postes du sélecteur : accessoire, son échec laisse le catalogue
+    // complet utilisable.
+    api.get('/assets').then(setAssets).catch(() => setAssets([]));
+  }, []);
   const [selected, setSelected] = useState(null); // { id, name, publisher, installs: [...] }
   const [loadingDetail, setLoadingDetail] = useState(false);
 
@@ -60,35 +83,72 @@ export default function Software() {
       tdClassName: 'hidden sm:table-cell text-ink-soft',
       render: (s) => s.publisher || '—',
     },
+    // Version installée sur le poste choisi (seulement quand un poste l'est).
+    ...(assetId
+      ? [
+          {
+            key: 'versions',
+            label: 'Version',
+            value: (s) => s.versions?.join(', ') ?? '',
+            filter: 'text',
+            tdClassName: 'text-ink-soft tabular-nums',
+            render: (s) => s.versions?.join(', ') || '—',
+          },
+        ]
+      : []),
     {
       key: 'installs',
-      label: 'Postes',
+      label: assetId ? 'Postes (parc)' : 'Postes',
       value: (s) => s.installs,
-      filter: false,
+      filterOptions: TRANCHES_POSTES,
       tdClassName: 'text-ink-soft tabular-nums',
     },
   ];
+
+  const poste = assets.find((a) => String(a.id) === assetId);
 
   return (
     <div className="mx-auto max-w-page space-y-4">
       <PageHeader
         title="Logiciels"
         description="Catalogue des logiciels remontés par l'inventaire. Sélectionnez-en un pour voir les postes concernés."
+        actions={
+          <div className="w-72 max-w-full">
+            <Combobox
+              ariaLabel="Filtrer par poste"
+              value={assetId}
+              onChange={(v) => {
+                setAssetId(v);
+                setSelected(null);
+              }}
+              options={assets.map((a) => ({ value: String(a.id), label: a.name }))}
+              placeholder="Filtrer par poste…"
+              emptyLabel="Tous les postes"
+            />
+          </div>
+        }
       />
 
       <Card>
         {error ? (
           <ErrorState error={error} onRetry={reload} />
-        ) : list === null ? (
-          <TableSkeleton rows={8} columns={3} />
+        ) : list === null || loading ? (
+          <TableSkeleton rows={8} columns={assetId ? 4 : 3} />
         ) : (
           <DataTable
+            // Remonté à chaque changement de poste : les filtres de colonnes
+            // portaient sur l'ancienne liste et la colonne Version apparaît.
+            key={assetId || 'tous'}
             rows={list}
             columns={columns}
             caption="Logiciels inventoriés"
             onRowClick={openSoftware}
-            emptyText="Aucun logiciel inventorié"
-            emptyHint="Les logiciels apparaissent ici dès qu'une source d'inventaire (agent GLPI, Intune) remonte les installations des postes."
+            emptyText={poste ? `Aucun logiciel remonté pour ${poste.name}` : 'Aucun logiciel inventorié'}
+            emptyHint={
+              poste
+                ? 'Ce poste n’a pas encore envoyé de liste de logiciels : seuls l’agent GLPI et les rapports d’inventaire en fournissent (pas Intune ni le scan SNMP).'
+                : "Les logiciels apparaissent ici dès que l'agent GLPI ou un rapport d'inventaire remonte les installations des postes (Intune et le scan SNMP n'en fournissent pas)."
+            }
           />
         )}
       </Card>

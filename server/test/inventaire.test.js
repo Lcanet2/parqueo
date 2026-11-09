@@ -112,6 +112,32 @@ describe('taille des rapports', () => {
   });
 });
 
+describe('catalogue logiciel filtré par poste', () => {
+  test('?assetId= ne garde que les logiciels du poste, avec leur version', async () => {
+    const poste = (serial, logiciels) =>
+      api.post('/api/inventory', {
+        body: { serial, name: serial, software: logiciels },
+        headers: { 'X-Parqueo-Token': TOKEN },
+      });
+    const a = await poste('SN-FILTRE-A', [
+      { name: 'Firefox', version: '128.0', publisher: 'Mozilla' },
+      { name: '7-Zip', version: '24.08', publisher: 'Igor Pavlov' },
+    ]);
+    await poste('SN-FILTRE-B', [{ name: 'Firefox', version: '131.0', publisher: 'Mozilla' }]);
+
+    const res = await api.get(`/api/software?assetId=${a.data.asset.id}`, { token: tokenAdmin });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.data.map((s) => s.name).sort(), ['7-Zip', 'Firefox']);
+    const firefox = res.data.find((s) => s.name === 'Firefox');
+    assert.deepEqual(firefox.versions, ['128.0'], 'version propre au poste');
+    assert.equal(firefox.installs, 2, 'le compteur reste celui de tout le parc');
+
+    const tout = await api.get('/api/software', { token: tokenAdmin });
+    assert.equal(tout.data[0].versions, undefined);
+    assert.equal((await api.get('/api/software?assetId=abc', { token: tokenAdmin })).status, 400);
+  });
+});
+
 describe('adaptateur agent GLPI', () => {
   const glpi = (n) => ({
     itemtype: 'Computer',

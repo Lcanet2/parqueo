@@ -19,6 +19,8 @@ export default function Combobox({
   allowEmpty = true,
   emptyLabel = 'Aucun',
   disabled = false,
+  // Libellé accessible quand le champ n'est pas enveloppé dans un <Field>.
+  ariaLabel,
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -91,6 +93,7 @@ export default function Combobox({
         disabled={disabled}
         placeholder={selected && !selected.value ? emptyLabel : placeholder}
         role="combobox"
+        aria-label={ariaLabel}
         aria-expanded={open}
         aria-controls={listId}
         aria-autocomplete="list"
