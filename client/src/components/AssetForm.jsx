@@ -55,8 +55,12 @@ export default function AssetForm({ asset, onSaved, onCancel }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-3xl space-y-3 p-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+    // Pleine largeur de la carte, comme la création de compte (Admin) : borné à
+    // max-w-3xl, le formulaire laissait les deux tiers de la carte vides et
+    // les boutons flottaient au milieu. Six champs → deux lignes de trois sur
+    // grand écran.
+    <form onSubmit={onSubmit} className="space-y-3 p-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Field label="Nom">
           <Input value={form.name} onChange={(e) => set('name', e.target.value)} required placeholder="Ex. : PC-COMPTA-03" />
         </Field>
