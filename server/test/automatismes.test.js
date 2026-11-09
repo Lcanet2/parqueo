@@ -108,6 +108,19 @@ describe('clôture automatique', () => {
     );
   });
 
+  test('un message du demandeur repousse la clôture', async () => {
+    const t = await ticketResoluAncien(30);
+    const tokenUser = await login(api, ctx.user.email);
+    const msg = await api.post(`/api/tickets/${t.id}/comments`, {
+      token: tokenUser,
+      body: { body: 'Toujours pas réglé' },
+    });
+    assert.equal(msg.status, 201);
+
+    assert.equal(await closeResolvedTickets(), 0);
+    assert.equal((await prisma.ticket.findUnique({ where: { id: t.id } })).status, 'resolved');
+  });
+
   test('un délai à 0 désactive la clôture', async () => {
     await prisma.setting.upsert({
       where: { key: 'app.config' },

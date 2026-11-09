@@ -97,10 +97,15 @@ export async function handleIncomingEmail({
       },
     });
     if (ticket) {
-      const comment = await prisma.ticketComment.create({
-        data: { ticketId: ticket.id, authorId: user.id, type: 'comment', body },
-        include: { author: { select: { id: true, name: true } } },
-      });
+      // Même règle que la réponse web : le message fait avancer updatedAt (voir
+      // routes/tickets.js), sans quoi la clôture automatique l'ignorerait.
+      const [comment] = await prisma.$transaction([
+        prisma.ticketComment.create({
+          data: { ticketId: ticket.id, authorId: user.id, type: 'comment', body },
+          include: { author: { select: { id: true, name: true } } },
+        }),
+        prisma.ticket.update({ where: { id: ticket.id }, data: { updatedAt: new Date() } }),
+      ]);
       await saveAttachments(ticket.id, user.id, attachments);
       notifyCommentAdded(ticket, comment);
       console.log(`[collecteur] réponse de ${sender} ajoutée au ticket #${ticket.id}`);

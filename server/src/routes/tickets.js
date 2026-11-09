@@ -424,15 +424,22 @@ router.post('/:id/comments', async (req, res) => {
   const tropLongCom = tropLong({ Commentaire: [body, LIMITS.commentaire] });
   if (tropLongCom) return res.status(400).json({ error: tropLongCom });
 
-  const comment = await prisma.ticketComment.create({
-    data: {
-      ticketId: id,
-      authorId: req.user.sub,
-      type: 'comment',
-      body,
-    },
-    include: { author: { select: { id: true, name: true, avatar: true } } },
-  });
+  // Un message est de l'activité : updatedAt avance avec lui. Sinon la clôture
+  // automatique, qui se fonde sur updatedAt, fermait un ticket résolu sur
+  // lequel le demandeur venait d'écrire « toujours pas réglé », et le tri par
+  // activité récente ignorait les échanges.
+  const [comment] = await prisma.$transaction([
+    prisma.ticketComment.create({
+      data: {
+        ticketId: id,
+        authorId: req.user.sub,
+        type: 'comment',
+        body,
+      },
+      include: { author: { select: { id: true, name: true, avatar: true } } },
+    }),
+    prisma.ticket.update({ where: { id }, data: { updatedAt: new Date() } }),
+  ]);
 
   notifyCommentAdded(ticket, comment);
 
@@ -447,15 +454,19 @@ router.post('/:id/attachments', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'Fichier manquant ou type non autorisé (images, PDF, documents…)' });
   }
 
-  const attachment = await prisma.attachment.create({
-    data: {
-      ticketId: id,
-      filename: req.file.originalname,
-      storedPath: req.file.path,
-      size: req.file.size,
-      uploadedBy: req.user.sub,
-    },
-  });
+  const [attachment] = await prisma.$transaction([
+    prisma.attachment.create({
+      data: {
+        ticketId: id,
+        filename: req.file.originalname,
+        storedPath: req.file.path,
+        size: req.file.size,
+        uploadedBy: req.user.sub,
+      },
+    }),
+    // Une pièce jointe est de l'activité, comme un message.
+    prisma.ticket.update({ where: { id }, data: { updatedAt: new Date() } }),
+  ]);
 
   res.status(201).json(attachment);
 });
