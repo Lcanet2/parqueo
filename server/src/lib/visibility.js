@@ -2,6 +2,9 @@
 // (créés ou assignés) + ceux de son équipe + les non assignés ; admin → tout.
 // Extrait dans un module pur pour être testable.
 export function visibilityWhere(user) {
+  // Fermé par défaut : un filtre `{ authorId: undefined }` serait ignoré par
+  // Prisma et ouvrirait tous les tickets. Sans identifiant, aucun ticket.
+  if (!Number.isInteger(user?.sub)) return { id: -1 };
   if (user.role === 'admin') return {};
   if (user.role === 'technician') {
     // authorId est indispensable : sans lui, un technicien perdait l'accès au

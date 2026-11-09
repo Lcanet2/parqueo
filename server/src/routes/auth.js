@@ -21,6 +21,7 @@ import { intuneEnabled } from '../services/intune.js';
 import { snmpEnabled } from '../services/snmp.js';
 import { text } from '../lib/input.js';
 import { DOSSIER_AVATARS } from './avatars.js';
+import { signerSession } from '../lib/session.js';
 
 const router = Router();
 
@@ -64,11 +65,7 @@ function toPublicUser(user) {
 }
 
 function issueToken(user) {
-  return jwt.sign(
-    { sub: user.id, role: user.role, teamId: user.teamId },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+  return signerSession(user);
 }
 
 // Le client interroge cet endpoint pour savoir s'il doit afficher le bouton SSO
@@ -209,11 +206,13 @@ router.patch('/password', authRequired, async (req, res) => {
     return res.status(400).json({ error: 'Mot de passe actuel incorrect' });
   }
 
-  await prisma.user.update({
+  // Les autres sessions (autre navigateur, poste oublié, jeton volé) tombent
+  // avec l'ancien mot de passe ; celle-ci reçoit un nouveau jeton.
+  const misAJour = await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash: await bcrypt.hash(newPassword, 10) },
+    data: { passwordHash: await bcrypt.hash(newPassword, 10), tokenVersion: { increment: 1 } },
   });
-  res.json({ ok: true });
+  res.json({ ok: true, token: issueToken(misAJour) });
 });
 
 // Chacun gère sa propre photo : passer par un administrateur pour changer son

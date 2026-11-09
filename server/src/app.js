@@ -23,6 +23,14 @@ import settingsRoutes from './routes/settings.js';
 export function createApp() {
   const app = express();
 
+  // L'API tourne derrière un proxy (Caddy dans la stack Docker, nginx sinon).
+  // Sans ce réglage, toutes les requêtes semblent venir du proxy : le frein du
+  // login comptait les échecs de tout le monde ensemble, et 20 mauvais mots de
+  // passe, d'où qu'ils viennent, bloquaient toutes les connexions.
+  // Par défaut, X-Forwarded-For n'est cru que s'il arrive d'une adresse locale
+  // ou privée — jamais d'un client Internet qui l'aurait forgé.
+  app.set('trust proxy', trustProxy(process.env.TRUST_PROXY));
+
   app.use(helmet());
   app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
 
@@ -76,6 +84,17 @@ export function createApp() {
   app.use(errorHandler);
 
   return app;
+}
+
+// TRUST_PROXY : « false », « true », un nombre de sauts, ou une liste
+// d'adresses/sous-réseaux (syntaxe Express).
+export function trustProxy(valeur) {
+  const v = valeur?.trim();
+  if (!v) return 'loopback, linklocal, uniquelocal';
+  if (v === 'false') return false;
+  if (v === 'true') return true;
+  if (/^\d+$/.test(v)) return Number(v);
+  return v;
 }
 
 // Middleware d'erreur unique. Sans lui, une erreur dans un handler `async`

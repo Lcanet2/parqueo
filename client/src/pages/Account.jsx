@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { api } from '../api/client.js';
+import { api, setToken } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Avatar, Button, Card, Field, Input, ErrorText, PageHeader } from '../components/ui.jsx';
 import { IconTrash } from '../components/icons.jsx';
@@ -32,7 +32,10 @@ export default function Account() {
 
     setBusy(true);
     try {
-      await api.patch('/auth/password', { currentPassword: current, newPassword: next });
+      const res = await api.patch('/auth/password', { currentPassword: current, newPassword: next });
+      // Le changement invalide toutes les sessions, celle-ci comprise : le
+      // serveur renvoie le jeton qui la remplace.
+      if (res?.token) setToken(res.token);
       setCurrent('');
       setNext('');
       setConfirm('');

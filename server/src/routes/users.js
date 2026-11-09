@@ -164,6 +164,9 @@ router.patch('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' });
     }
     data.passwordHash = await bcrypt.hash(password, 10);
+    // Mot de passe réinitialisé par l'administration (compte compromis, départ) :
+    // les sessions ouvertes avec l'ancien ne doivent pas survivre.
+    data.tokenVersion = { increment: 1 };
   }
 
   const user = await prisma.user.update({ where: { id }, data, select: publicSelect });

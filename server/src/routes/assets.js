@@ -1,7 +1,7 @@
 import { Router } from '../lib/router.js';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
-import { requireRole } from '../middleware/roles.js';
+import { requireRole, estSupport } from '../middleware/roles.js';
 import { getAppSettings } from '../lib/appSettings.js';
 import { text, tropLong, LIMITS } from '../lib/input.js';
 
@@ -18,15 +18,15 @@ router.use(authRequired);
 
 // L'accès des utilisateurs finals à l'inventaire est débrayable dans Paramètres.
 router.use(async (req, res, next) => {
-  if (req.user.role !== 'user') return next();
+  if (estSupport(req.user)) return next();
   if ((await getAppSettings()).assetsVisibleToUsers) return next();
   res.status(403).json({ error: "L'inventaire n'est pas accessible" });
 });
 
 // Utilisateur final : uniquement ses actifs. Tech/admin : tout.
 function visibilityWhere(user) {
-  if (user.role === 'user') return { assignedUserId: user.sub };
-  return {};
+  if (estSupport(user)) return {};
+  return { assignedUserId: user.sub };
 }
 
 router.get('/', async (req, res) => {

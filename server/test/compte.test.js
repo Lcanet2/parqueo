@@ -82,6 +82,8 @@ describe('changement de mot de passe', () => {
     const apres = (await prisma.user.findUnique({ where: { id: ctx.admin.id } })).passwordHash;
     assert.notEqual(avant, apres);
     assert.match(apres, /^\$2[aby]\$/, 'doit rester un hachage bcrypt');
+    // L'ancien jeton est révoqué par le changement : on garde celui renvoyé.
+    t.admin = res.data.token;
   });
 
   test('un compte SSO est orienté vers Microsoft', async () => {
@@ -89,8 +91,8 @@ describe('changement de mot de passe', () => {
       data: { email: 'sso@test.local', name: 'Compte SSO', role: 'user', provider: 'entra', passwordHash: null },
     });
     // Jeton émis comme le ferait le retour SSO.
-    const { default: jwt } = await import('jsonwebtoken');
-    const token = jwt.sign({ sub: sso.id, role: 'user', teamId: null }, process.env.JWT_SECRET);
+    const { signerSession } = await import('../src/lib/session.js');
+    const token = signerSession(sso);
 
     const res = await changer(token, { currentPassword: 'peu-importe', newPassword: 'motdepasse2' });
     assert.equal(res.status, 400);

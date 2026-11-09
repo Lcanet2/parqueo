@@ -170,7 +170,7 @@ describe('jetons rejetés (déclencheurs du 401 côté client)', () => {
   });
 
   test('jeton expiré : 401', async () => {
-    const expiré = jwt.sign({ sub: ctx.admin.id, role: 'admin' }, process.env.JWT_SECRET, {
+    const expiré = jwt.sign({ typ: 'session', sub: ctx.admin.id, ver: 0 }, process.env.JWT_SECRET, {
       expiresIn: '-1h',
     });
     const res = await api.get('/api/tickets', { token: expiré });
@@ -179,7 +179,7 @@ describe('jetons rejetés (déclencheurs du 401 côté client)', () => {
   });
 
   test('jeton signé avec un autre secret : 401', async () => {
-    const forgé = jwt.sign({ sub: ctx.admin.id, role: 'admin' }, 'un-autre-secret');
+    const forgé = jwt.sign({ typ: 'session', sub: ctx.admin.id, ver: 0 }, 'un-autre-secret');
     assert.equal((await api.get('/api/tickets', { token: forgé })).status, 401);
   });
 });

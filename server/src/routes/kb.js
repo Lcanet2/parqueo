@@ -1,6 +1,7 @@
 import { Router } from '../lib/router.js';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
+import { estSupport } from '../middleware/roles.js';
 import { getAppSettings } from '../lib/appSettings.js';
 import { text, tropLong, LIMITS } from '../lib/input.js';
 
@@ -27,7 +28,7 @@ router.get('/', async (req, res) => {
   const { q, categoryId, take } = req.query;
   const where = {};
 
-  if (req.user.role === 'user') where.published = true;
+  if (!estSupport(req.user)) where.published = true;
   if (categoryId) where.categoryId = Number(categoryId) || undefined;
   if (text(q)) {
     const words = text(q).split(/\s+/).filter((w) => w.length >= 3).slice(0, 8);
@@ -52,7 +53,7 @@ router.get('/:id', async (req, res) => {
   const article = await prisma.kbArticle.findFirst({
     where: {
       id: Number(req.params.id) || 0,
-      ...(req.user.role === 'user' ? { published: true } : {}),
+      ...(estSupport(req.user) ? {} : { published: true }),
     },
     include: articleInclude,
   });

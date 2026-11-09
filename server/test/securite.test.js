@@ -43,7 +43,11 @@ describe('escalade de privilèges', () => {
   });
 
   test('un rôle inventé dans le jeton ne donne aucun droit', async () => {
-    const forge = jwt.sign({ sub: ctx.user.id, role: 'superadmin' }, process.env.JWT_SECRET);
+    // Jeton de session valide, rôle ajouté à la main : le rôle vient de la base.
+    const forge = jwt.sign(
+      { typ: 'session', sub: ctx.user.id, ver: 0, role: 'superadmin' },
+      process.env.JWT_SECRET
+    );
     assert.equal((await api.get('/api/users', { token: forge })).status, 403);
     assert.equal((await api.get('/api/workflows', { token: forge })).status, 403);
   });

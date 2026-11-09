@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { authRequired } from '../middleware/auth.js';
-import { requireRole } from '../middleware/roles.js';
+import { requireRole, estSupport } from '../middleware/roles.js';
 import { visibilityWhere } from '../lib/visibility.js';
 import { getAppSettings } from '../lib/appSettings.js';
 import { text, tropLong, LIMITS, entierBorne } from '../lib/input.js';
@@ -112,7 +112,7 @@ router.get('/satisfaction', async (req, res) => {
   }
   let payload;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET);
+    payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     if (payload.purpose !== 'satisfaction') throw new Error('bad purpose');
   } catch {
     return satisfactionPage(res, 400, 'Lien invalide ou expiré', 'Ce lien de satisfaction n\'est plus valable.');
@@ -279,7 +279,7 @@ router.post('/', async (req, res) => {
     const asset = await prisma.asset.findFirst({
       where: {
         id: Number(assetId) || 0,
-        ...(req.user.role === 'user' ? { assignedUserId: req.user.sub } : {}),
+        ...(estSupport(req.user) ? {} : { assignedUserId: req.user.sub }),
       },
       select: { id: true },
     });
@@ -289,7 +289,7 @@ router.post('/', async (req, res) => {
   // La priorité choisie par un simple utilisateur n'est prise en compte que si
   // le paramètre l'autorise ; sinon c'est la priorité par défaut qui s'applique.
   const settings = await getAppSettings();
-  const canSetPriority = req.user.role !== 'user' || settings.userCanSetPriority;
+  const canSetPriority = estSupport(req.user) || settings.userCanSetPriority;
 
   let ticket = await prisma.ticket.create({
     data: {
@@ -501,7 +501,7 @@ router.delete('/:id/attachments/:attachmentId', async (req, res) => {
   });
   if (!attachment) return res.status(404).json({ error: 'Pièce jointe introuvable' });
 
-  const estStaff = req.user.role !== 'user';
+  const estStaff = estSupport(req.user);
   if (!estStaff && attachment.uploadedBy !== req.user.sub) {
     return res.status(403).json({ error: 'Seul l’auteur de l’envoi peut retirer cette pièce jointe' });
   }

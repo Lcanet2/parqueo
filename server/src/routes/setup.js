@@ -1,6 +1,6 @@
 import { Router } from '../lib/router.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { signerSession } from '../lib/session.js';
 import { prisma } from '../lib/prisma.js';
 import { text, tropLong, LIMITS } from '../lib/input.js';
 
@@ -73,11 +73,7 @@ router.post('/', async (req, res) => {
 
   // Jeton renvoyé directement : l'administrateur entre dans l'application sans
   // repasser par l'écran de connexion qu'il vient de se créer.
-  const token = jwt.sign(
-    { sub: admin.id, role: admin.role, teamId: admin.teamId },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+  const token = signerSession(admin);
   const { passwordHash: _, ...publicUser } = admin;
   res.status(201).json({ token, user: publicUser });
 });
