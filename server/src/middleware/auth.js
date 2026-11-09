@@ -23,10 +23,14 @@ export async function authRequired(req, res, next) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.sub },
-      select: { id: true, role: true, teamId: true, tokenVersion: true },
+      select: { id: true, role: true, teamId: true, tokenVersion: true, active: true },
     });
     if (!user || user.tokenVersion !== session.ver) {
       return res.status(401).json({ error: 'Session expirée, reconnectez-vous' });
+    }
+    // Désactivé par l'administration : les sessions ouvertes tombent aussitôt.
+    if (!user.active) {
+      return res.status(401).json({ error: 'Compte désactivé' });
     }
     req.user = { sub: user.id, role: user.role, teamId: user.teamId };
     next();

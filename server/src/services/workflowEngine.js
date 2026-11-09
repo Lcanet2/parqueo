@@ -194,7 +194,8 @@ async function applyAction(step, ticket, wf) {
     }
     case 'assign_user': {
       const user = await prisma.user.findUnique({ where: { id: Number(cfg.userId) || 0 } });
-      if (!user || user.role === 'user' || ticket.assigneeId === user.id) return ticket;
+      // Un compte désactivé ne reçoit plus de tickets, même par un workflow.
+      if (!user || user.role === 'user' || !user.active || ticket.assigneeId === user.id) return ticket;
       // Même invariant que l'assignation manuelle : un ticket assigné n'est
       // plus « Nouveau ». Sinon le statut dépendrait de qui a assigné.
       const auto = statutApresAssignation(ticket.status, user.id);

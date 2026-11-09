@@ -67,6 +67,10 @@ model User {
   // Incrémenté à chaque changement de mot de passe : les jetons de session
   // portent la valeur courante, ceux émis avant le changement sont refusés.
   tokenVersion Int      @default(0) @map("token_version")
+  // Compte désactivé (départ, compte compromis) : plus de connexion ni de
+  // session, mais l'historique — tickets, messages, articles — reste intact.
+  // C'est l'alternative à la suppression, refusée dès qu'il y a un historique.
+  active       Boolean  @default(true)
   // Nom de fichier opaque de la photo de profil (voir src/routes/avatars.js),
   // ou null pour les initiales. Le nom change à chaque envoi : il sert donc à la
   // fois de purge de cache et de jeton d'accès.

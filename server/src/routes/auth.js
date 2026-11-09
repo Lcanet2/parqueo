@@ -98,6 +98,10 @@ router.post('/login', async (req, res) => {
   if (!valid) {
     return res.status(401).json({ error: 'Identifiants invalides' });
   }
+  // Après le mot de passe seulement : le motif n'est révélé qu'au titulaire.
+  if (!user.active) {
+    return res.status(403).json({ error: 'Ce compte est désactivé. Contactez l’administration.' });
+  }
 
   res.json({ token: issueToken(user), user: toPublicUser(user) });
 });
@@ -234,6 +238,11 @@ router.get('/sso/callback', async (req, res) => {
           passwordHash: null,
         },
       });
+    }
+
+    if (!user.active) {
+      console.warn(`[sso] connexion refusée pour ${email} : compte désactivé`);
+      return back('sso_error=Compte+désactivé,+contactez+l’administration');
     }
 
     // Dans le fragment (#), jamais dans la requête : un fragment n'est envoyé à

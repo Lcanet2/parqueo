@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
+  Badge,
   Button,
   Input,
   Select,
@@ -104,6 +105,16 @@ export default function Admin() {
   );
 }
 
+// Seul un `false` explicite désactive : un compte renvoyé sans le champ (API
+// antérieure à la désactivation) est actif. Le test « !u.active » affichait
+// alors tous les comptes désactivés, et « Réactiver » n'avait aucun effet.
+const estDesactive = (u) => u.active === false;
+
+const STATUT_COMPTE = {
+  actif: { label: 'Actif', fg: 'var(--color-positive)', bg: 'var(--color-positive-soft)' },
+  desactive: { label: 'Désactivé', fg: 'var(--color-status-closed)', bg: 'var(--color-status-closed-bg)' },
+};
+
 function UsersTab() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState(null);
@@ -154,6 +165,21 @@ function UsersTab() {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  // Désactiver plutôt que supprimer : un compte qui a un historique ne peut pas
+  // être supprimé (tickets, messages…), mais il doit pouvoir être bloqué.
+  async function toggleActive(u) {
+    const desactiver = !estDesactive(u);
+    if (
+      desactiver &&
+      !confirm(
+        `Désactiver le compte de ${u.name} ?\n\nSes sessions sont coupées immédiatement et il ne pourra plus se connecter. Son historique est conservé ; vous pourrez le réactiver.`
+      )
+    ) {
+      return;
+    }
+    await patchUser(u.id, { active: !desactiver });
   }
 
   async function removeUser(u) {
@@ -228,7 +254,14 @@ function UsersTab() {
   if (!users) return <TableSkeleton rows={6} columns={4} />;
 
   const columns = [
-    { key: 'name', label: 'Nom', value: (u) => u.name, filter: 'text', tdClassName: 'font-medium' },
+    {
+      key: 'name',
+      label: 'Nom',
+      value: (u) => u.name,
+      filter: 'text',
+      tdClassName: 'font-medium',
+      render: (u) => <span className={estDesactive(u) ? 'text-ink-faint line-through' : undefined}>{u.name}</span>,
+    },
     {
       key: 'email',
       label: 'Email',
@@ -276,6 +309,12 @@ function UsersTab() {
       ),
     },
     {
+      key: 'active',
+      label: 'Statut',
+      value: (u) => (estDesactive(u) ? 'Désactivé' : 'Actif'),
+      render: (u) => <Badge {...(estDesactive(u) ? STATUT_COMPTE.desactive : STATUT_COMPTE.actif)} />,
+    },
+    {
       key: 'actions',
       label: '',
       filter: false,
@@ -288,6 +327,15 @@ function UsersTab() {
           <Button variant="ghost" aria-label={`Gérer ${u.name}`} onClick={() => openManage(u)}>
             Gérer
           </Button>
+          {u.id !== me.id && (
+            <Button
+              variant="ghost"
+              aria-label={`${estDesactive(u) ? 'Réactiver' : 'Désactiver'} ${u.name}`}
+              onClick={() => toggleActive(u)}
+            >
+              {estDesactive(u) ? 'Réactiver' : 'Désactiver'}
+            </Button>
+          )}
           {u.id !== me.id && (
             <Button variant="ghost" aria-label={`Supprimer ${u.name}`} onClick={() => removeUser(u)}>
               Supprimer

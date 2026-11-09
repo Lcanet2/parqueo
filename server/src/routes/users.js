@@ -18,6 +18,7 @@ const publicSelect = {
   teamId: true,
   team: true,
   avatar: true,
+  active: true,
   createdAt: true,
 };
 
@@ -27,7 +28,8 @@ router.use(authRequired);
 // pour remplir les listes d'assignation.
 router.get('/assignable', requireRole('admin', 'technician'), async (req, res) => {
   const users = await prisma.user.findMany({
-    where: { role: { in: ['admin', 'technician'] } },
+    // Un compte désactivé ne reçoit plus de tickets.
+    where: { role: { in: ['admin', 'technician'] }, active: true },
     select: { id: true, name: true, role: true, teamId: true, avatar: true },
     orderBy: { name: 'asc' },
   });
@@ -138,7 +140,7 @@ router.patch('/:id', async (req, res) => {
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
-  const { name, email, role, teamId, password } = req.body;
+  const { name, email, role, teamId, password, active } = req.body;
   const data = {};
 
   if (name !== undefined && text(name)) data.name = text(name);
@@ -159,6 +161,13 @@ router.patch('/:id', async (req, res) => {
     data.role = role;
   }
   if (teamId !== undefined) data.teamId = teamId === null ? null : Number(teamId);
+  if (active !== undefined) {
+    if (typeof active !== 'boolean') return res.status(400).json({ error: 'Valeur « actif » invalide' });
+    if (existing.id === req.user.sub && !active) {
+      return res.status(400).json({ error: 'Impossible de désactiver son propre compte' });
+    }
+    data.active = active;
+  }
   if (password !== undefined) {
     if (typeof password !== 'string' || password.length < 8) {
       return res.status(400).json({ error: 'Mot de passe : 8 caractères minimum' });
@@ -208,7 +217,7 @@ router.delete('/:id', async (req, res) => {
 
   if (usages.length) {
     return res.status(409).json({
-      error: `Cet utilisateur a ${usages.join(', ')}. Changez son rôle ou son mot de passe plutôt que de le supprimer.`,
+      error: `Cet utilisateur a ${usages.join(', ')}. Désactivez-le plutôt que de le supprimer : son historique sera conservé.`,
     });
   }
 

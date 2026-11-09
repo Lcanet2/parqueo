@@ -196,3 +196,14 @@ describe('retour lié au navigateur (CSRF de connexion)', () => {
     assert.match(c, /Path=\/api\/auth\/sso/);
   });
 });
+
+describe('compte désactivé', () => {
+  test('la connexion Microsoft est refusée', async () => {
+    const premiere = await connexion({ oid: 'oid-parti', email: 'parti@test.local', name: 'Parti' });
+    assert.ok(premiere.token);
+    await prisma.user.update({ where: { email: 'parti@test.local' }, data: { active: false } });
+    const r = await connexion({ oid: 'oid-parti', email: 'parti@test.local', name: 'Parti' });
+    assert.equal(r.token, null);
+    assert.match(r.erreur, /désactivé/);
+  });
+});

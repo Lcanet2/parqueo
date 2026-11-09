@@ -74,6 +74,10 @@ export async function handleIncomingEmail({
   if (!sender || selfAddresses.includes(sender)) return { action: 'ignored', reason: 'expéditeur système' };
 
   const user = await prisma.user.findUnique({ where: { email: sender } });
+  if (user && !user.active) {
+    console.log(`[collecteur] email ignoré — compte désactivé : ${sender}`);
+    return { action: 'ignored', reason: 'compte désactivé' };
+  }
   if (!user) {
     console.log(`[collecteur] email ignoré — expéditeur inconnu : ${sender}`);
     return { action: 'ignored', reason: 'expéditeur inconnu' };

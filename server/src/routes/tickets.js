@@ -401,6 +401,9 @@ router.patch('/:id', requireRole('admin', 'technician'), async (req, res) => {
       if (!assignee || assignee.role === 'user') {
         return res.status(400).json({ error: 'Assigné invalide (doit être technicien ou admin)' });
       }
+      if (!assignee.active && newAssigneeId !== existing.assigneeId) {
+        return res.status(400).json({ error: `${assignee.name} est désactivé : choisissez un autre assigné` });
+      }
       if (newAssigneeId !== existing.assigneeId) {
         events.push(`Assigné à ${assignee.name}`);
         // On ne prévient pas quelqu'un qui s'assigne lui-même le ticket.
