@@ -99,6 +99,25 @@ describe('téléversement de pièces jointes', () => {
     assert.equal(res.headers.get('x-injecte'), null, 'en-tête injecté');
   });
 
+  test('un envoi vers un ticket interdit ou inexistant ne laisse aucun fichier', async () => {
+    const prive = await prisma.ticket.create({
+      data: { title: 'Privé', description: 'x', categoryId: ctx.category.id, authorId: ctx.admin.id },
+    });
+    const fichiers = () => fs.readdirSync('uploads').filter((f) => f !== '.gitkeep' && f !== 'avatars').length;
+    const avant = fichiers();
+    for (const cible of [prive.id, 999999]) {
+      const fd = new FormData();
+      fd.append('file', new Blob(['intrus']), 'intrus.txt');
+      const res = await fetch(`${api.base}/api/tickets/${cible}/attachments`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t.user}` },
+        body: fd,
+      });
+      assert.equal(res.status, 404);
+    }
+    assert.equal(fichiers(), avant, 'fichier orphelin laissé sur le disque');
+  });
+
   test('le contenu est servi en pièce jointe, jamais rendu', async () => {
     const r = await televerser('piege.txt', '<script>alert(1)</script>');
     const res = await fetch(`${api.base}/api/tickets/${ticketId}/attachments/${r.data.id}`, {

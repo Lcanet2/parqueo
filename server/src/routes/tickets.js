@@ -520,7 +520,13 @@ router.post('/:id/comments', async (req, res) => {
 router.post('/:id/attachments', upload.single('file'), async (req, res) => {
   const id = Number(req.params.id);
   const ticket = await findVisibleTicket(id, req.user);
-  if (!ticket) return res.status(404).json({ error: 'Ticket introuvable' });
+  if (!ticket) {
+    // Multer a déjà écrit le fichier sur le disque avant ce contrôle : sans ce
+    // ménage, chaque envoi vers un ticket inexistant ou interdit laissait un
+    // fichier orphelin pour toujours — de quoi remplir le disque à la main.
+    if (req.file) await effacerFichiers([{ storedPath: req.file.path }]);
+    return res.status(404).json({ error: 'Ticket introuvable' });
+  }
   if (!req.file) {
     return res.status(400).json({ error: 'Fichier manquant ou type non autorisé (images, PDF, documents…)' });
   }
