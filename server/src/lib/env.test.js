@@ -34,3 +34,22 @@ describe('contrôle des variables au démarrage', () => {
     assert.equal(verifierEnv({}).length, 2);
   });
 });
+
+import { optionsSmtp } from '../services/mailer.js';
+
+test('optionsSmtp : TLS implicite sur 465, STARTTLS ailleurs, forçable', () => {
+  assert.equal(optionsSmtp({ SMTP_HOST: 'smtp.x', SMTP_PORT: '465' }).secure, true);
+  assert.equal(optionsSmtp({ SMTP_HOST: 'smtp.x', SMTP_PORT: '587' }).secure, false);
+  assert.equal(optionsSmtp({ SMTP_HOST: 'smtp.x' }).port, 587);
+  assert.equal(optionsSmtp({ SMTP_HOST: 'smtp.x', SMTP_PORT: '2465', SMTP_SECURE: 'true' }).secure, true);
+  assert.equal(optionsSmtp({ SMTP_HOST: 'smtp.x', SMTP_PORT: '465', SMTP_SECURE: 'false' }).secure, false);
+});
+
+test('optionsSmtp : délais courts, un SMTP muet ne fige pas la création de ticket', () => {
+  const o = optionsSmtp({ SMTP_HOST: 'smtp.x' });
+  for (const cle of ['connectionTimeout', 'greetingTimeout', 'socketTimeout']) {
+    assert.ok(o[cle] > 0 && o[cle] <= 30_000, `${cle} = ${o[cle]}`);
+  }
+  assert.equal(o.auth, undefined);
+  assert.deepEqual(optionsSmtp({ SMTP_HOST: 'h', SMTP_USER: 'u', SMTP_PASS: 'p' }).auth, { user: 'u', pass: 'p' });
+});

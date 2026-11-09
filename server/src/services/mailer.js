@@ -4,15 +4,30 @@ import { STATUS_LABELS, PRIORITY_LABELS } from '../lib/labels.js';
 import { getAppSettings } from '../lib/appSettings.js';
 
 // Sans SMTP_HOST configuré (dev), les emails sont simplement loggés en console.
-const transport = process.env.SMTP_HOST
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      auth: process.env.SMTP_USER
-        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-        : undefined,
-    })
-  : null;
+// Options du transport SMTP, tirées de l'environnement. Exportée pour les tests.
+//
+// - secure : TLS dès la connexion (port 465, « SMTPS »). Sans lui, nodemailer
+//   parlait en clair à un port qui attend du TLS et l'envoi échouait toujours.
+//   SMTP_SECURE l'impose ou l'interdit ; par défaut il suit le port. Sur 587,
+//   STARTTLS reste négocié automatiquement.
+// - délais : par défaut nodemailer patiente 2 min pour se connecter et 10 min
+//   sur un socket muet. Un email de workflow étant envoyé pendant la création
+//   du ticket, un serveur SMTP en carafe figeait la requête d'autant.
+export function optionsSmtp(env = process.env) {
+  const port = Number(env.SMTP_PORT) || 587;
+  const secure = env.SMTP_SECURE === 'true' ? true : env.SMTP_SECURE === 'false' ? false : port === 465;
+  return {
+    host: env.SMTP_HOST,
+    port,
+    secure,
+    auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
+  };
+}
+
+let transport = process.env.SMTP_HOST ? nodemailer.createTransport(optionsSmtp()) : null;
 
 // Exposé pour les étapes « email » des workflows.
 export async function sendMail(to, subject, text) {

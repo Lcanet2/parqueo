@@ -52,6 +52,7 @@ services:
       # docs/installation.md §3 pour la référence complète.
       SMTP_HOST: '${SMTP_HOST:-}'
       SMTP_PORT: '${SMTP_PORT:-587}'
+      SMTP_SECURE: '${SMTP_SECURE:-}'
       SMTP_USER: '${SMTP_USER:-}'
       SMTP_PASS: '${SMTP_PASS:-}'
       SMTP_FROM: '${SMTP_FROM:-Parqueo <no-reply@parqueo.local>}'
