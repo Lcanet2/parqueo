@@ -145,6 +145,16 @@ model Ticket {
   attachments  Attachment[]
   workflowRuns WorkflowRun[]
 
+  // PostgreSQL n'indexe pas les clés étrangères de lui-même. Ces colonnes
+  // portent la visibilité par rôle (auteur, assigné, équipe), les filtres de
+  // la liste, les agrégats du tableau de bord et le tri par activité.
+  @@index([status])
+  @@index([authorId])
+  @@index([assigneeId])
+  @@index([teamId])
+  @@index([categoryId])
+  @@index([assetId])
+  @@index([updatedAt])
   @@map("tickets")
 }
 
@@ -159,6 +169,7 @@ model TicketComment {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([ticketId])
   @@map("ticket_comments")
 }
 
@@ -173,6 +184,7 @@ model Attachment {
   uploader   User     @relation(fields: [uploadedBy], references: [id])
   createdAt  DateTime @default(now()) @map("created_at")
 
+  @@index([ticketId])
   @@map("attachments")
 }
 
@@ -212,6 +224,8 @@ model Asset {
   tickets  Ticket[]
   software SoftwareInstall[]
 
+  // Visibilité d'un utilisateur final : ses actifs uniquement.
+  @@index([assignedUserId])
   @@map("assets")
 }
 
@@ -275,6 +289,7 @@ model FormField {
   options  String? // JSON: tableau de choix pour le type select
   position Int       @default(0)
 
+  @@index([formId])
   @@map("form_fields")
 }
 
@@ -341,6 +356,7 @@ model WorkflowStep {
   x      Float  @default(0) // position sur le canvas
   y      Float  @default(0)
 
+  @@index([workflowId])
   @@map("workflow_steps")
 }
 
