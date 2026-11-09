@@ -26,7 +26,20 @@ async function send(to, subject, text) {
     return;
   }
   try {
-    await transport.sendMail({ from: process.env.SMTP_FROM, to, subject, text });
+    await transport.sendMail({
+      from: process.env.SMTP_FROM,
+      to,
+      subject,
+      text,
+      headers: {
+        // RFC 3834 : message produit par une machine. Les répondeurs bien
+        // élevés n'y répondent pas, et le collecteur d'en face le reconnaît.
+        'Auto-Submitted': 'auto-generated',
+        // Demande explicite à Exchange / Outlook de ne pas renvoyer d'absence
+        // automatique ni d'accusé de lecture.
+        'X-Auto-Response-Suppress': 'All',
+      },
+    });
   } catch (err) {
     // Un échec d'email ne doit jamais faire échouer la requête.
     console.error(`[mail] échec d'envoi à ${to} :`, err.message);

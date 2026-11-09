@@ -35,6 +35,52 @@ export function bareAddress(from = '') {
   return (m ? m[1] : from).trim().toLowerCase();
 }
 
+// --- Réponses automatiques ---------------------------------------------------
+//
+// Deux absences automatiques (demandeur et technicien) se renvoyaient la balle
+// à travers Parqueo : la réponse automatique devenait un commentaire, le
+// commentaire une notification, la notification une nouvelle réponse
+// automatique… sans fin. Un message produit par une machine n'engage personne :
+// il n'ouvre ni ne commente aucun ticket.
+//
+// Signaux reconnus :
+//   - Auto-Submitted (RFC 3834) autre que « no » : auto-replied, auto-generated…
+//     C'est ce que posent Exchange, Gmail et la plupart des répondeurs ;
+//   - Precedence bulk / junk / list / auto_reply (convention historique) ;
+//   - X-Autoreply, X-Autorespond (répondeurs plus anciens) ;
+//   - les avis de non-remise (mailer-daemon, postmaster, rapport DSN).
+
+const PRECEDENCE_AUTO = /^(bulk|junk|list|auto[_-]reply)$/i;
+const EXPEDITEUR_AUTO = /^(mailer-daemon|postmaster)@/i;
+
+// Valeur (sans le nom) du premier en-tête `nom` parmi les headerLines de
+// mailparser, ou null.
+function entete(headerLines, nom) {
+  const ligne = headerLines.find((h) => h?.key?.toLowerCase() === nom);
+  if (!ligne) return null;
+  const i = ligne.line.indexOf(':');
+  return (i >= 0 ? ligne.line.slice(i + 1) : ligne.line).trim();
+}
+
+// Motif si le message vient d'un répondeur ou d'un serveur de messagerie,
+// sinon null.
+export function motifReponseAutomatique(headerLines = [], fromAddress = '') {
+  const auto = entete(headerLines, 'auto-submitted');
+  if (auto && !/^no\b/i.test(auto)) return `Auto-Submitted: ${auto}`;
+
+  const precedence = entete(headerLines, 'precedence');
+  if (precedence && PRECEDENCE_AUTO.test(precedence)) return `Precedence: ${precedence}`;
+
+  if (entete(headerLines, 'x-autoreply') !== null || entete(headerLines, 'x-autorespond') !== null) {
+    return 'répondeur automatique';
+  }
+
+  if (EXPEDITEUR_AUTO.test(bareAddress(fromAddress))) return 'avis de non-remise';
+  if (/multipart\/report/i.test(entete(headerLines, 'content-type') ?? '')) return 'avis de non-remise';
+
+  return null;
+}
+
 // --- Authentification de l'expéditeur ---------------------------------------
 //
 // L'adresse From d'un email se falsifie sans effort. Le serveur de réception

@@ -61,3 +61,25 @@ test('echecAuthentification laisse passer ce qui n’est pas un échec', () => {
   assert.equal(echecAuthentification('mx; spf=fail; dkim=pass header.d=x.fr'), null);
   assert.equal(echecAuthentification('compauth=pass reason=100'), null);
 });
+
+import { motifReponseAutomatique } from './inbound.js';
+
+const h = (key, valeur) => ({ key, line: `${key}: ${valeur}` });
+
+test('motifReponseAutomatique reconnaît répondeurs et avis de non-remise', () => {
+  assert.match(motifReponseAutomatique([h('Auto-Submitted', 'auto-replied')]), /Auto-Submitted/);
+  assert.match(motifReponseAutomatique([h('Auto-Submitted', 'auto-generated')]), /Auto-Submitted/);
+  assert.match(motifReponseAutomatique([h('Precedence', 'bulk')]), /Precedence/);
+  assert.match(motifReponseAutomatique([h('Precedence', 'auto_reply')]), /Precedence/);
+  assert.ok(motifReponseAutomatique([h('X-Autoreply', 'yes')]));
+  assert.ok(motifReponseAutomatique([], 'MAILER-DAEMON@mx.entreprise.fr'));
+  assert.ok(motifReponseAutomatique([], 'Mail Delivery <postmaster@entreprise.fr>'));
+  assert.ok(motifReponseAutomatique([h('Content-Type', 'multipart/report; report-type=delivery-status')]));
+});
+
+test('motifReponseAutomatique laisse passer un message écrit par une personne', () => {
+  assert.equal(motifReponseAutomatique(), null);
+  assert.equal(motifReponseAutomatique([h('Auto-Submitted', 'no')], 'marie@entreprise.fr'), null);
+  assert.equal(motifReponseAutomatique([h('Precedence', 'normal')]), null);
+  assert.equal(motifReponseAutomatique([h('Content-Type', 'text/plain; charset=utf-8')]), null);
+});

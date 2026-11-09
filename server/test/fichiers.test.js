@@ -201,6 +201,24 @@ describe('collecteur email', () => {
     }
   });
 
+  test('une absence automatique ne commente ni ne crée de ticket (anti-boucle)', async () => {
+    const tk = await prisma.ticket.create({
+      data: { title: 'Wifi', description: 'coupé', categoryId: ctx.category.id, authorId: ctx.user.id },
+    });
+    const avant = await prisma.ticket.count();
+    for (const subject of [`Réponse automatique : Re: [Parqueo] Ticket #${tk.id}`, 'Absent du bureau']) {
+      const r = await handleIncomingEmail({
+        fromAddress: ctx.user.email,
+        subject,
+        text: 'Je suis absent jusqu’au 15.',
+        headerLines: [{ key: 'auto-submitted', line: 'Auto-Submitted: auto-replied' }],
+      });
+      assert.equal(r.action, 'ignored', subject);
+    }
+    assert.equal(await prisma.ticketComment.count({ where: { ticketId: tk.id } }), 0);
+    assert.equal(await prisma.ticket.count(), avant);
+  });
+
   test('un sujet vide donne un titre par défaut', async () => {
     const r = await handleIncomingEmail({ fromAddress: ctx.user.email, subject: '', text: 'sans objet' });
     const tk = await prisma.ticket.findUnique({ where: { id: r.ticketId } });

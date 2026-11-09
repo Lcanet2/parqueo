@@ -10,6 +10,7 @@ import {
   bareAddress,
   premierAuthResults,
   echecAuthentification,
+  motifReponseAutomatique,
 } from '../lib/inbound.js';
 import { LIMITS, tronque } from '../lib/input.js';
 import { onTicketCreated } from './workflowEngine.js';
@@ -45,8 +46,17 @@ export async function handleIncomingEmail({
   text = '',
   attachments = [],
   authResults = null,
+  headerLines = [],
 }) {
   const sender = bareAddress(fromAddress);
+
+  // Répondeur, absence, avis de non-remise : jamais un ticket ni un commentaire
+  // (voir lib/inbound.js — c'est ce qui coupe les boucles entre deux absences).
+  const automatique = motifReponseAutomatique(headerLines, fromAddress);
+  if (automatique) {
+    console.log(`[collecteur] message automatique de ${sender} ignoré (${automatique})`);
+    return { action: 'ignored', reason: `message automatique : ${automatique}` };
+  }
 
   // Usurpation détectée par le serveur de réception : le message n'engage pas
   // la personne dont il porte l'adresse.
@@ -161,6 +171,7 @@ async function pollOnce() {
           text: parsed.text ?? '',
           attachments: parsed.attachments ?? [],
           authResults: premierAuthResults(parsed.headerLines),
+          headerLines: parsed.headerLines ?? [],
         });
       } catch (err) {
         console.error('[collecteur] échec de traitement d\'un email :', err.message);
