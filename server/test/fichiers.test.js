@@ -219,6 +219,28 @@ describe('collecteur email', () => {
     assert.equal(await prisma.ticket.count(), avant);
   });
 
+  test('répondre par email à une note interne reste interne', async () => {
+    const tk = await prisma.ticket.create({
+      data: { title: 'Serveur', description: 'lent', categoryId: ctx.category.id, authorId: ctx.user.id, assigneeId: ctx.admin.id },
+    });
+    const sujet = `Re: [Parqueo] Ticket #${tk.id} : note interne de Technicien`;
+    const r = await handleIncomingEmail({
+      fromAddress: ctx.admin.email,
+      subject: sujet,
+      text: 'Vu, je redémarre ce soir',
+      attachments: [{ filename: 'diag.txt', content: Buffer.from('logs internes') }],
+    });
+    assert.equal(r.action, 'comment');
+    const c = await prisma.ticketComment.findFirst({ where: { ticketId: tk.id } });
+    assert.equal(c.internal, true, 'réponse à une note interne publiée');
+    assert.equal(await prisma.attachment.count({ where: { ticketId: tk.id } }), 0, 'pièce jointe publiée');
+
+    // Le même sujet envoyé par le demandeur ne fabrique pas de note interne.
+    await handleIncomingEmail({ fromAddress: ctx.user.email, subject: sujet, text: 'et moi ?' });
+    const publique = await prisma.ticketComment.findFirst({ where: { ticketId: tk.id, authorId: ctx.user.id } });
+    assert.equal(publique.internal, false);
+  });
+
   test('un sujet vide donne un titre par défaut', async () => {
     const r = await handleIncomingEmail({ fromAddress: ctx.user.email, subject: '', text: 'sans objet' });
     const tk = await prisma.ticket.findUnique({ where: { id: r.ticketId } });

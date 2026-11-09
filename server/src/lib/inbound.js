@@ -7,6 +7,14 @@ export function extractTicketId(subject = '') {
   return m ? Number(m[1]) : null;
 }
 
+// Réponse à la notification d'une note interne ? Son sujet le dit :
+// « Re: [Parqueo] Ticket #12 : note interne de Paul » (voir services/mailer.js).
+// Sans ce repère, cliquer « Répondre » sur une note interne publiait la réponse
+// — et souvent la note citée — sous les yeux du demandeur.
+export function estReponseNoteInterne(subject = '') {
+  return /ticket\s*#\d+\s*:\s*note interne\b/i.test(subject);
+}
+
 // Retire la citation du message précédent d'une réponse email.
 // Heuristique volontairement simple : on coupe au premier marqueur connu.
 const QUOTE_MARKERS = [

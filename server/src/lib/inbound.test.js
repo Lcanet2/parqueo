@@ -83,3 +83,13 @@ test('motifReponseAutomatique laisse passer un message écrit par une personne',
   assert.equal(motifReponseAutomatique([h('Precedence', 'normal')]), null);
   assert.equal(motifReponseAutomatique([h('Content-Type', 'text/plain; charset=utf-8')]), null);
 });
+
+import { estReponseNoteInterne } from './inbound.js';
+
+test('estReponseNoteInterne reconnaît la réponse à une notification de note interne', () => {
+  assert.ok(estReponseNoteInterne('Re: [Parqueo] Ticket #12 : note interne de Paul'));
+  assert.ok(estReponseNoteInterne('RE : TR: [Parqueo] Ticket #12 : Note interne de Paul'));
+  assert.ok(!estReponseNoteInterne('Re: [Parqueo] Ticket #12 : nouveau message de Paul'));
+  assert.ok(!estReponseNoteInterne('Re: [Parqueo] Ticket #12 créé : note interne du service'));
+  assert.ok(!estReponseNoteInterne(''));
+});

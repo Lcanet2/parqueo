@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { prisma } from '../lib/prisma.js';
+import { estSupport } from '../middleware/roles.js';
 import {
   extractTicketId,
   stripQuotedReply,
@@ -11,6 +12,7 @@ import {
   premierAuthResults,
   echecAuthentification,
   motifReponseAutomatique,
+  estReponseNoteInterne,
 } from '../lib/inbound.js';
 import { LIMITS, tronque } from '../lib/input.js';
 import { onTicketCreated } from './workflowEngine.js';
@@ -97,18 +99,29 @@ export async function handleIncomingEmail({
       },
     });
     if (ticket) {
+      // Réponse à une note interne, par quelqu'un du support : elle reste
+      // interne. Un demandeur ne reçoit jamais ces notifications ; si le
+      // repère apparaît dans son sujet, il ne change rien.
+      const internal = estReponseNoteInterne(subject) && estSupport(user);
+
       // Même règle que la réponse web : le message fait avancer updatedAt (voir
       // routes/tickets.js), sans quoi la clôture automatique l'ignorerait.
       const [comment] = await prisma.$transaction([
         prisma.ticketComment.create({
-          data: { ticketId: ticket.id, authorId: user.id, type: 'comment', body },
+          data: { ticketId: ticket.id, authorId: user.id, type: 'comment', body, internal },
           include: { author: { select: { id: true, name: true } } },
         }),
         prisma.ticket.update({ where: { id: ticket.id }, data: { updatedAt: new Date() } }),
       ]);
-      await saveAttachments(ticket.id, user.id, attachments);
+      // Une pièce jointe est toujours visible du demandeur : jamais à côté
+      // d'une note interne (même règle que l'interface).
+      if (internal) {
+        if (attachments.length) console.log(`[collecteur] pièces jointes d'une note interne ignorées (ticket #${ticket.id})`);
+      } else {
+        await saveAttachments(ticket.id, user.id, attachments);
+      }
       notifyCommentAdded(ticket, comment);
-      console.log(`[collecteur] réponse de ${sender} ajoutée au ticket #${ticket.id}`);
+      console.log(`[collecteur] ${internal ? 'note interne' : 'réponse'} de ${sender} ajoutée au ticket #${ticket.id}`);
       return { action: 'comment', ticketId: ticket.id };
     }
     // Ticket inexistant ou hors de sa visibilité : on ne jette pas le message,
