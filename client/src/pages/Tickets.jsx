@@ -123,7 +123,11 @@ export default function Tickets() {
 
   const hasFilters = priority || assignee || author || category || team || q;
   const visible = loading || error ? null : data?.items ?? null;
-  const totalAll = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
+  // `open` est un regroupement (nouveau + en cours + en attente), pas un statut :
+  // l'additionner comptait ces tickets deux fois dans « Tous ».
+  const totalAll = counts
+    ? Object.entries(counts).reduce((n, [statut, c]) => (statut === 'open' ? n : n + c), 0)
+    : 0;
 
   const chips = [
     { value: '', label: 'Tous', count: totalAll },
