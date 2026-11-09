@@ -38,6 +38,14 @@
 		Referrer-Policy same-origin
 		# Ne pas annoncer la version du serveur.
 		-Server
+		# Content-Security-Policy : seuls les scripts servis par Parqueo
+		# s'exécutent. Le jeton de session vit dans localStorage ; sans cette
+		# politique, la moindre injection de script suffirait à le voler.
+		#  - style-src 'unsafe-inline' : React pose des attributs style ;
+		#  - img-src data: blob: : aperçus des pièces jointes et icônes en ligne ;
+		#  - frame-ancestors 'none' : remplace X-Frame-Options pour les
+		#    navigateurs récents.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	}
 
 	handle /api/* {
