@@ -284,6 +284,9 @@ router.get('/:id', async (req, res) => {
     include: {
       ...ticketInclude,
       comments: {
+        // Les notes internes ne quittent pas le support : un demandeur ne les
+        // reçoit pas, même en lisant la réponse brute de l'API.
+        where: estSupport(req.user) ? undefined : { internal: false },
         include: { author: { select: { id: true, name: true, avatar: true } } },
         orderBy: { createdAt: 'asc' },
       },
@@ -477,6 +480,12 @@ router.post('/:id/comments', async (req, res) => {
 
   const body = text(req.body.body);
   if (!body) return res.status(400).json({ error: 'Commentaire vide' });
+  // Refus explicite plutôt que publication silencieuse : un message que son
+  // auteur croyait interne ne doit jamais finir sous les yeux du demandeur.
+  const internal = req.body.internal === true;
+  if (internal && !estSupport(req.user)) {
+    return res.status(403).json({ error: 'Les notes internes sont réservées au support' });
+  }
   const tropLongCom = tropLong({ Commentaire: [body, LIMITS.commentaire] });
   if (tropLongCom) return res.status(400).json({ error: tropLongCom });
 
@@ -491,6 +500,7 @@ router.post('/:id/comments', async (req, res) => {
         authorId: req.user.sub,
         type: 'comment',
         body,
+        internal,
       },
       include: { author: { select: { id: true, name: true, avatar: true } } },
     }),

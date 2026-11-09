@@ -93,16 +93,19 @@ export async function notifyAssigned(ticket) {
   );
 }
 
-// Nouveau commentaire : on prévient demandeur et assigné, sauf l'auteur du message.
+// Nouveau commentaire : on prévient demandeur et assigné, sauf l'auteur du
+// message. Une note interne ne part jamais vers le demandeur — seulement vers
+// l'assigné.
 export async function notifyCommentAdded(ticket, comment) {
   if (!(await getAppSettings()).notifyOnComment) return;
-  const to = [ticket.author, ticket.assignee]
+  const destinataires = comment.internal ? [ticket.assignee] : [ticket.author, ticket.assignee];
+  const to = destinataires
     .filter((u) => u?.email && u.id !== comment.author?.id)
     .map((u) => u.email)
     .join(', ');
   return send(
     to,
-    `[Parqueo] Ticket #${ticket.id} : nouveau message de ${comment.author?.name ?? '—'}`,
+    `[Parqueo] Ticket #${ticket.id} : ${comment.internal ? 'note interne' : 'nouveau message'} de ${comment.author?.name ?? '—'}`,
     `${comment.author?.name ?? 'Quelqu\'un'} a répondu sur le ticket #${ticket.id} « ${ticket.title} » :\n\n${comment.body}`
   );
 }

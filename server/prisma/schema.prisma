@@ -166,6 +166,9 @@ model TicketComment {
   author   User        @relation(fields: [authorId], references: [id])
   type     CommentType @default(comment)
   body     String
+  // Note interne : échange entre techniciens, jamais montré au demandeur ni
+  // envoyé par email à celui-ci. Toujours faux pour un événement.
+  internal Boolean     @default(false)
 
   createdAt DateTime @default(now()) @map("created_at")
 

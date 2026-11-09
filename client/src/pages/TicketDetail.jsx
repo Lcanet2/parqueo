@@ -16,7 +16,7 @@ import {
   PageHeader,
 } from '../components/ui.jsx';
 import Combobox from '../components/Combobox.jsx';
-import { IconX, IconHourglass, IconLink } from '../components/icons.jsx';
+import { IconX, IconHourglass, IconLink, IconLock } from '../components/icons.jsx';
 import { TICKET_STATUS, TICKET_PRIORITY, formatDateTime } from '../lib/labels.js';
 
 const IMAGE_RE = /\.(png|jpe?g|gif|webp)$/i;
@@ -122,18 +122,27 @@ function MessageHeader({ author, isRequester, isMe, createdAt }) {
   );
 }
 
-// Un message texte de la conversation.
-function Message({ author, createdAt, body, isRequester, isMe }) {
+// Un message texte de la conversation. Une note interne (support seulement)
+// se distingue nettement : un technicien doit savoir d'un coup d'œil ce que le
+// demandeur a lu ou non.
+function Message({ author, createdAt, body, isRequester, isMe, internal = false }) {
+  const bulle = internal
+    ? 'border-dashed border-warning/40 bg-warning-soft'
+    : isRequester
+      ? 'border-line bg-canvas'
+      : 'border-accent/15 bg-accent-soft/50';
   return (
     <li className="flex gap-3">
       <Avatar name={author?.name} id={author?.id ?? 0} avatar={author?.avatar} />
       <div className="min-w-0 flex-1">
         <MessageHeader author={author} isRequester={isRequester} isMe={isMe} createdAt={createdAt} />
-        <div
-          className={`mt-1.5 rounded-lg rounded-tl-sm border px-3.5 py-2.5 text-sm whitespace-pre-wrap ${
-            isRequester ? 'border-line bg-canvas' : 'border-accent/15 bg-accent-soft/50'
-          }`}
-        >
+        <div className={`mt-1.5 rounded-lg rounded-tl-sm border px-3.5 py-2.5 text-sm whitespace-pre-wrap ${bulle}`}>
+          {internal && (
+            <span className="mb-1 flex items-center gap-1 text-xs font-medium text-warning">
+              <IconLock size={12} />
+              Note interne · invisible du demandeur
+            </span>
+          )}
           {body}
         </div>
       </div>
@@ -226,6 +235,9 @@ export default function TicketDetail() {
   const [ticket, setTicket] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [comment, setComment] = useState('');
+  // Mode de la zone de saisie (support seulement) : réponse au demandeur ou
+  // note interne.
+  const [internal, setInternal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]); // [{file, previewUrl}]
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -273,6 +285,9 @@ export default function TicketDetail() {
     1 + ticket.comments.filter((c) => c.type === 'comment').length + ticket.attachments.length;
 
   function addFiles(files) {
+    // Une pièce jointe est toujours visible du demandeur : pas d'ajout en mode
+    // note interne, plutôt qu'un fichier qui fuirait à côté d'une note privée.
+    if (internal) return;
     const accepted = [...files].filter((f) => f.size <= 10 * 1024 * 1024);
     setPendingFiles((prev) => [
       ...prev,
@@ -320,7 +335,7 @@ export default function TicketDetail() {
     setSending(true);
     try {
       if (comment.trim()) {
-        await api.post(`/tickets/${ticket.id}/comments`, { body: comment });
+        await api.post(`/tickets/${ticket.id}/comments`, { body: comment, ...(internal ? { internal: true } : {}) });
       }
       for (const { file, previewUrl } of pendingFiles) {
         const fd = new FormData();
@@ -401,6 +416,7 @@ export default function TicketDetail() {
                   body={item.body}
                   isRequester={item.author?.id === ticket.author?.id}
                   isMe={item.author?.id === user.id}
+                  internal={item.internal}
                 />
               )
             )}
@@ -410,10 +426,41 @@ export default function TicketDetail() {
             <div className="flex gap-3">
               <Avatar name={user.name} id={user.id} avatar={user.avatar} />
               <div className="min-w-0 flex-1">
+                {isStaff && (
+                  <div role="radiogroup" aria-label="Type de message" className="mb-2 flex gap-1 text-xs">
+                    {[
+                      [false, 'Répondre au demandeur'],
+                      [true, 'Note interne'],
+                    ].map(([valeur, libelle]) => (
+                      <button
+                        key={libelle}
+                        type="button"
+                        role="radio"
+                        aria-checked={internal === valeur}
+                        onClick={() => setInternal(valeur)}
+                        className={`flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 font-medium [@media(pointer:coarse)]:min-h-11 ${
+                          internal === valeur
+                            ? valeur
+                              ? 'bg-warning-soft text-warning'
+                              : 'bg-accent-soft text-accent'
+                            : 'text-ink-soft hover:text-ink'
+                        }`}
+                      >
+                        {valeur && <IconLock size={12} />}
+                        {libelle}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <Textarea
-                  aria-label="Votre réponse"
+                  aria-label={internal ? 'Note interne' : 'Votre réponse'}
                   rows={4}
-                  placeholder="Répondre… (collez une capture d'écran directement ici)"
+                  className={internal ? 'border-warning/40! bg-warning-soft!' : undefined}
+                  placeholder={
+                    internal
+                      ? 'Note interne : visible du support uniquement, jamais envoyée au demandeur'
+                      : "Répondre… (collez une capture d'écran directement ici)"
+                  }
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   onPaste={onPaste}
@@ -422,6 +469,11 @@ export default function TicketDetail() {
                   }}
                 />
 
+                {internal && pendingFiles.length > 0 && (
+                  <p className="mt-2 text-xs text-warning">
+                    Les pièces jointes sont visibles du demandeur : retirez-les, ou repassez en réponse au demandeur.
+                  </p>
+                )}
                 {pendingFiles.length > 0 && (
                   <ul className="mt-2 flex flex-wrap gap-2">
                     {pendingFiles.map(({ file, previewUrl }, idx) => (
@@ -462,6 +514,7 @@ export default function TicketDetail() {
                     />
                     <button
                       type="button"
+                      hidden={internal}
                       onClick={() => fileInputRef.current?.click()}
                       className="flex cursor-pointer items-center gap-1.5 rounded-sm text-xs text-ink-soft hover:text-accent [@media(pointer:coarse)]:min-h-11"
                     >
@@ -474,9 +527,11 @@ export default function TicketDetail() {
                     variant="primary"
                     type="submit"
                     aria-busy={sending}
-                    disabled={(!comment.trim() && pendingFiles.length === 0) || sending}
+                    disabled={
+                      (!comment.trim() && pendingFiles.length === 0) || sending || (internal && pendingFiles.length > 0)
+                    }
                   >
-                    {sending ? 'Envoi…' : 'Envoyer'}
+                    {sending ? 'Envoi…' : internal ? 'Ajouter la note' : 'Envoyer'}
                   </Button>
                 </div>
               </div>

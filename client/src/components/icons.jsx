@@ -327,6 +327,13 @@ export const IconMoon = (p) => (
   </Icon>
 );
 
+export const IconLock = (p) => (
+  <Icon {...p}>
+    <rect x="4" y="11" width="16" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </Icon>
+);
+
 export const IconTrash = (p) => (
   <Icon {...p}>
     <polyline points="3 6 5 6 21 6" />
