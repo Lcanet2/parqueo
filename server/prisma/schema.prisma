@@ -59,6 +59,9 @@ model User {
   // Nul pour les comptes SSO (pas de mot de passe local). provider : local | entra.
   passwordHash String?  @map("password_hash")
   provider     String   @default("local")
+  // Identité Entra « tid:oid », posée à la première connexion SSO. Immuable
+  // côté Microsoft, contrairement à l'email : c'est elle qui désigne le compte.
+  ssoSubject   String?  @unique @map("sso_subject")
   name         String
   role         Role     @default(user)
   // Incrémenté à chaque changement de mot de passe : les jetons de session

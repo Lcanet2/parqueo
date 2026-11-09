@@ -22,6 +22,7 @@ import { snmpEnabled } from '../services/snmp.js';
 import { text } from '../lib/input.js';
 import { DOSSIER_AVATARS } from './avatars.js';
 import { signerSession } from '../lib/session.js';
+import { identiteEntra, decisionRattachement } from '../lib/sso.js';
 
 const router = Router();
 
@@ -117,7 +118,7 @@ router.get('/sso/login', async (req, res) => {
 });
 
 // Retour d'Entra : on valide, on retrouve/crée le compte, on émet notre JWT, puis
-// on renvoie le navigateur vers le client avec le jeton dans l'URL.
+// on renvoie le navigateur vers le client avec le jeton dans le fragment de l'URL.
 router.get('/sso/callback', async (req, res) => {
   const back = (params) => res.redirect(`${postLoginUrl()}?${params}`);
   if (!ssoEnabled()) return res.status(404).json({ error: 'SSO non configuré' });
@@ -130,7 +131,7 @@ router.get('/sso/callback', async (req, res) => {
     // 1. Valider le state (et récupérer le nonce attendu).
     let nonce;
     try {
-      const payload = jwt.verify(state, process.env.JWT_SECRET);
+      const payload = jwt.verify(state, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       if (payload.purpose !== 'sso') throw new Error('bad');
       nonce = payload.nonce;
     } catch {
@@ -141,7 +142,9 @@ router.get('/sso/callback', async (req, res) => {
     const tokens = await exchangeCode(code);
     const claims = await verifyIdToken(tokens.id_token, nonce);
 
-    const email = String(claims.email || claims.preferred_username || '').toLowerCase();
+    const identite = identiteEntra(claims);
+    if (!identite) return back('sso_error=Identité+Microsoft+incomplète');
+    const { email } = identite;
     if (!email) return back('sso_error=Aucune+adresse+email+dans+le+compte');
 
     // 3. Garde-fou optionnel : domaines autorisés.
@@ -150,21 +153,42 @@ router.get('/sso/callback', async (req, res) => {
       return back('sso_error=Domaine+non+autorisé');
     }
 
-    // 4. Provisioning JIT : compte créé à la première connexion en rôle « user ».
-    let user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    // 4. Compte désigné par l'identité Entra ; l'email ne sert qu'au premier
+    // rattachement, et jamais pour un invité (voir lib/sso.js).
+    const parSujet = await prisma.user.findUnique({ where: { ssoSubject: identite.subject } });
+    const parEmail = parSujet ? null : await prisma.user.findUnique({ where: { email } });
+    const decision = decisionRattachement({ identite, parSujet, parEmail });
+
+    let user;
+    if (decision.action === 'refuser') {
+      console.warn(`[sso] connexion refusée pour ${email} (${identite.subject}) : ${decision.raison}`);
+      return back(`sso_error=${encodeURIComponent(decision.raison)}`);
+    } else if (decision.action === 'ouvrir') {
+      user = decision.user;
+    } else if (decision.action === 'rattacher') {
+      user = await prisma.user.update({
+        where: { id: decision.user.id },
+        data: { ssoSubject: identite.subject },
+      });
+      console.log(`[sso] compte #${user.id} (${email}) rattaché à ${identite.subject}`);
+    } else {
+      // Provisioning JIT : compte créé à la première connexion en rôle « user ».
       user = await prisma.user.create({
         data: {
           email,
           name: claims.name || email,
           role: 'user',
           provider: 'entra',
+          ssoSubject: identite.subject,
           passwordHash: null,
         },
       });
     }
 
-    return back(`sso_token=${issueToken(user)}`);
+    // Dans le fragment (#), jamais dans la requête : un fragment n'est envoyé à
+    // aucun serveur, il ne finit donc ni dans les journaux du proxy ni dans un
+    // en-tête Referer.
+    return res.redirect(`${postLoginUrl()}#sso_token=${issueToken(user)}`);
   } catch (err) {
     return back(`sso_error=${encodeURIComponent(err.message)}`);
   }

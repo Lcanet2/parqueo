@@ -26,14 +26,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Retour de connexion SSO : le serveur renvoie le jeton dans l'URL. On le
-    // récupère, on le stocke, puis on nettoie l'URL pour ne pas le laisser traîner.
-    const url = new URL(window.location.href);
-    const ssoToken = url.searchParams.get('sso_token');
+    // Retour de connexion SSO : le serveur renvoie le jeton dans le fragment de
+    // l'URL (#sso_token=…), qu'aucun serveur ne reçoit. On le stocke, puis on
+    // retire le fragment pour qu'il ne reste pas dans l'historique.
+    const ssoToken = new URLSearchParams(window.location.hash.slice(1)).get('sso_token');
     if (ssoToken) {
       setToken(ssoToken);
-      url.searchParams.delete('sso_token');
-      window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
     }
 
     // Une session valide vaut preuve que l'installation est faite : on
