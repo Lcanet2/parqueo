@@ -6,7 +6,7 @@ import {
   isGateSatisfied,
   evaluateCondition,
 } from '../lib/workflowUtils.js';
-import { sendMail, urlTicket } from './mailer.js';
+import { sendMail, urlTicket, notifyAssigned, notifyStatusChanged } from './mailer.js';
 import { statutApresAssignation } from '../lib/statut.js';
 
 // Moteur de workflows : parcours de graphe à états. Un ticket qui correspond à
@@ -162,6 +162,15 @@ function nextKey(edges, key) {
 
 // --- Exécution d'une action (mise à jour du ticket + événement tracé) ---
 
+// Notifications des actions de workflow. Elles manquaient : un ticket assigné
+// ou résolu par un workflow ne prévenait personne, et l'enquête de satisfaction
+// ne partait pas — alors que la même action faite à la main, ou par la clôture
+// automatique, notifie. Envoyées sans être attendues, comme depuis les routes ;
+// un échec n'interrompt jamais le workflow.
+function notifier(envoi) {
+  envoi.catch((err) => console.error('[workflow] notification en échec :', err.message));
+}
+
 function updateWithEvent(ticket, data, eventBody) {
   return prisma.ticket.update({
     where: { id: ticket.id },
@@ -189,11 +198,14 @@ async function applyAction(step, ticket, wf) {
       // Même invariant que l'assignation manuelle : un ticket assigné n'est
       // plus « Nouveau ». Sinon le statut dépendrait de qui a assigné.
       const auto = statutApresAssignation(ticket.status, user.id);
-      return updateWithEvent(
+      const assigne = await updateWithEvent(
         ticket,
         { assigneeId: user.id, ...(auto ? { status: auto } : {}) },
         `Assigné à ${user.name} (${label})`
       );
+      notifier(notifyAssigned(assigne));
+      if (auto) notifier(notifyStatusChanged(assigne, ticket.status));
+      return assigne;
     }
     case 'set_priority': {
       if (!PRIORITIES.includes(cfg.priority) || ticket.priority === cfg.priority) return ticket;
@@ -205,11 +217,13 @@ async function applyAction(step, ticket, wf) {
     }
     case 'set_status': {
       if (!STATUSES.includes(cfg.status) || ticket.status === cfg.status) return ticket;
-      return updateWithEvent(
+      const change = await updateWithEvent(
         ticket,
         { status: cfg.status },
         `Statut changé : ${ticket.status} → ${cfg.status} (${label})`
       );
+      notifier(notifyStatusChanged(change, ticket.status));
+      return change;
     }
     case 'add_note': {
       if (!cfg.body?.trim()) return ticket;

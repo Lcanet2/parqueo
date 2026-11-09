@@ -65,3 +65,45 @@ describe('lien vers le ticket', () => {
     assert.equal(envoyes[0].headers['Auto-Submitted'], 'auto-generated');
   });
 });
+
+describe('actions de workflow', () => {
+  beforeEach(async () => {
+    await prisma.workflowRun.deleteMany();
+    await prisma.workflowStep.deleteMany();
+    await prisma.workflow.deleteMany();
+  });
+
+  test('une assignation par workflow prévient l’assigné', async () => {
+    await prisma.workflow.create({
+      data: {
+        name: 'Dispatch',
+        trigger: 'ticket_created',
+        edges: { trigger: 'a' },
+        steps: { create: [{ key: 'a', type: 'assign_user', config: { userId: ctx.tech.id } }] },
+      },
+    });
+    const { data } = await creerTicket();
+    await laisserPartir();
+    const pourTech = envoyes.filter((m) => m.to.includes(ctx.tech.email));
+    assert.ok(pourTech.some((m) => /vous a été assigné/.test(m.subject)), 'assigné non prévenu');
+    assert.ok(envoyes.some((m) => /Nouveau → En cours/.test(m.subject)), 'prise en charge non notifiée');
+    assert.equal((await prisma.ticket.findUnique({ where: { id: data.id } })).assigneeId, ctx.tech.id);
+  });
+
+  test('une résolution par workflow envoie l’enquête de satisfaction', async () => {
+    await prisma.workflow.create({
+      data: {
+        name: 'Résolution auto',
+        trigger: 'ticket_created',
+        edges: { trigger: 's' },
+        steps: { create: [{ key: 's', type: 'set_status', config: { status: 'resolved' } }] },
+      },
+    });
+    await creerTicket();
+    await laisserPartir();
+    const resolution = envoyes.find((m) => /→ Résolu/.test(m.subject));
+    assert.ok(resolution, 'résolution non notifiée');
+    assert.ok(resolution.to.includes(ctx.user.email));
+    assert.match(resolution.text, /satisfaction\?token=/);
+  });
+});
