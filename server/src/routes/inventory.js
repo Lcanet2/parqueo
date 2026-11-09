@@ -47,10 +47,16 @@ router.post('/', express.json({ limit: '5mb' }), requireInventoryToken, async (r
 // POST /api/inventory/glpi — format natif de l'agent GLPI. Le corps peut être du
 // JSON brut ou compressé (zlib/gzip selon la config de l'agent) : on lit en brut
 // et on décompresse au besoin avant de mapper vers le format normalisé.
+// Plafond après décompression. Le corps compressé est limité à 15 Mo, mais une
+// « bombe » de quelques dizaines de ko peut se décompresser en gigaoctets et
+// épuiser la mémoire du processus. Un inventaire réel pèse quelques Mo.
+const TAILLE_MAX_DECOMPRESSEE = 50 * 1024 * 1024;
+
 function inflateBody(buf) {
   if (!buf?.length) return '';
-  if (buf[0] === 0x1f && buf[1] === 0x8b) return zlib.gunzipSync(buf).toString('utf8'); // gzip
-  if (buf[0] === 0x78) return zlib.inflateSync(buf).toString('utf8'); // zlib/deflate
+  const options = { maxOutputLength: TAILLE_MAX_DECOMPRESSEE };
+  if (buf[0] === 0x1f && buf[1] === 0x8b) return zlib.gunzipSync(buf, options).toString('utf8'); // gzip
+  if (buf[0] === 0x78) return zlib.inflateSync(buf, options).toString('utf8'); // zlib/deflate
   return buf.toString('utf8'); // déjà du texte
 }
 

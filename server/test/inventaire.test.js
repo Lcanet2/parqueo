@@ -152,6 +152,18 @@ describe('adaptateur agent GLPI', () => {
     assert.equal(res.status, 400);
     assert.equal((await api.get('/api/health')).status, 200);
   });
+
+  test('une bombe de décompression est refusée sans épuiser la mémoire', async () => {
+    // 200 Mo de zéros, qui pèsent environ 200 ko une fois compressés.
+    const bombe = zlib.gzipSync(Buffer.alloc(200 * 1024 * 1024), { level: 9 });
+    assert.ok(bombe.length < 1024 * 1024);
+    const res = await api.post('/api/inventory/glpi', {
+      raw: bombe,
+      headers: { 'Content-Type': 'application/x-compress-gzip', 'X-Parqueo-Token': TOKEN },
+    });
+    assert.equal(res.status, 400);
+    assert.equal((await api.get('/api/health')).status, 200);
+  });
 });
 
 describe('authentification de l’ingestion', () => {
