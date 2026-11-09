@@ -25,6 +25,33 @@ import {
 import AssetForm from '../components/AssetForm.jsx';
 import { IconAlert } from '../components/icons.jsx';
 
+// Filtre « Achat » : par âge du matériel, ce qui sert au renouvellement et au
+// suivi des garanties. Une option par date n'aurait servi à rien.
+const ANNEE = 365.25 * 86400000;
+const ageAchat = (a) => (Date.now() - new Date(a.purchaseDate).getTime()) / ANNEE;
+const TRANCHES_ACHAT = [
+  { value: 'lt1', label: 'Moins d’un an', test: (a) => !!a.purchaseDate && ageAchat(a) < 1 },
+  { value: '1-3', label: '1 à 3 ans', test: (a) => !!a.purchaseDate && ageAchat(a) >= 1 && ageAchat(a) < 3 },
+  { value: '3-5', label: '3 à 5 ans', test: (a) => !!a.purchaseDate && ageAchat(a) >= 3 && ageAchat(a) < 5 },
+  { value: 'gt5', label: 'Plus de 5 ans', test: (a) => !!a.purchaseDate && ageAchat(a) >= 5 },
+  { value: 'none', label: 'Non renseignée', test: (a) => !a.purchaseDate },
+];
+
+// Filtre « Dernier contact » : même seuil que le signalement en rouge
+// (Paramètres → assetStaleDays). Sans seuil, seule la distinction « remonte /
+// ne remonte pas » a un sens.
+function tranchesContact(staleDays) {
+  const jamais = { value: 'never', label: 'Jamais (saisie manuelle)', test: (a) => !a.lastSeenAt };
+  if (!staleDays) {
+    return [{ value: 'seen', label: 'Inventorié automatiquement', test: (a) => !!a.lastSeenAt }, jamais];
+  }
+  return [
+    { value: 'fresh', label: `Moins de ${staleDays} j`, test: (a) => !!a.lastSeenAt && !isStaleAsset(a, staleDays) },
+    { value: 'stale', label: `Sans nouvelles depuis ${staleDays} j`, test: (a) => isStaleAsset(a, staleDays) },
+    jamais,
+  ];
+}
+
 export default function Assets() {
   const { user } = useAuth();
   const { settings } = useSettings();
@@ -102,7 +129,7 @@ export default function Assets() {
       key: 'purchaseDate',
       label: 'Achat',
       value: (a) => a.purchaseDate ?? '',
-      filter: false,
+      filterOptions: TRANCHES_ACHAT,
       className: 'hidden lg:table-cell',
       tdClassName: 'hidden lg:table-cell text-xs text-ink-faint',
       render: (a) => formatDate(a.purchaseDate),
@@ -117,9 +144,11 @@ export default function Assets() {
     },
     {
       key: 'lastSeenAt',
-      label: 'Vu',
+      // Date de la dernière remontée automatique (agent, Intune, SNMP) : sert à
+      // repérer les machines qui ne donnent plus signe de vie.
+      label: 'Dernier contact',
       value: (a) => a.lastSeenAt ?? '',
-      filter: false,
+      filterOptions: tranchesContact(staleDays),
       className: 'hidden lg:table-cell',
       tdClassName: 'hidden lg:table-cell text-xs text-ink-faint',
       render: (a) => {

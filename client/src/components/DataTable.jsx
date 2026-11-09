@@ -15,6 +15,11 @@ import { Pagination } from './Pagination.jsx';
 //   value: (row) => …,        valeur triée/filtrée (et cellule par défaut)
 //   render: (row) => node,    cellule personnalisée (sinon value)
 //   filter: 'select'|'text'|false,  type de filtre (défaut 'select' si value)
+//   filterOptions: [{ value, label, test: (row) => bool }],
+//                             tranches prédéfinies à la place des valeurs
+//                             distinctes : indispensable pour une date, dont
+//                             chaque valeur est unique (« moins d'un an »,
+//                             « plus de 5 ans »… plutôt qu'une option par jour)
 //   sortable: bool,           tri (défaut true si value)
 //   className,                classes responsive partagées en-tête + cellule
 // }
@@ -24,6 +29,10 @@ import { Pagination } from './Pagination.jsx';
 // clavier et ouvrable dans un onglet — un `onClick` sur `<tr>` ne l'était pas.
 
 const EMPTY = '__empty__'; // option « (vide) » pour filtrer les valeurs absentes
+
+// Type de filtre d'une colonne : explicite, sinon « select » dès qu'elle a une
+// valeur (des tranches prédéfinies impliquent un select).
+const filterKind = (col) => col.filter ?? (col.value || col.filterOptions ? 'select' : false);
 
 const norm = (v) => (v === null || v === undefined || v === '' ? '' : String(v));
 
@@ -51,7 +60,7 @@ export default function DataTable({
   const options = useMemo(() => {
     const out = {};
     for (const col of columns) {
-      if ((col.filter ?? (col.value ? 'select' : false)) !== 'select') continue;
+      if (filterKind(col) !== 'select' || col.filterOptions) continue;
       const set = new Set();
       let hasEmpty = false;
       for (const r of rows) {
@@ -70,7 +79,8 @@ export default function DataTable({
       columns.every((col) => {
         const f = filters[col.key];
         if (!f) return true;
-        const kind = col.filter ?? (col.value ? 'select' : false);
+        const kind = filterKind(col);
+        if (col.filterOptions) return col.filterOptions.find((o) => o.value === f)?.test(r) ?? true;
         if (kind === 'text') return norm(col.value(r)).toLowerCase().includes(f.toLowerCase());
         if (kind === 'select') return f === EMPTY ? norm(col.value(r)) === '' : norm(col.value(r)) === f;
         return true;
@@ -113,7 +123,7 @@ export default function DataTable({
     onRowClick(row);
   }
 
-  const hasFilterRow = columns.some((c) => (c.filter ?? (c.value ? 'select' : false)) !== false);
+  const hasFilterRow = columns.some((c) => filterKind(c) !== false);
 
   return (
     <div>
@@ -137,7 +147,7 @@ export default function DataTable({
             {hasFilterRow && (
               <tr className="border-b border-line">
                 {columns.map((col) => {
-                  const kind = col.filter ?? (col.value ? 'select' : false);
+                  const kind = filterKind(col);
                   return (
                     <th key={col.key} className={`px-2 py-1.5 font-normal ${col.className ?? ''}`}>
                       {kind === 'select' ? (
@@ -148,10 +158,18 @@ export default function DataTable({
                           className="w-full text-xs"
                         >
                           <option value="">Tous</option>
-                          {options[col.key]?.values.map((v) => (
-                            <option key={v} value={v}>{v}</option>
-                          ))}
-                          {options[col.key]?.hasEmpty && <option value={EMPTY}>(vide)</option>}
+                          {col.filterOptions ? (
+                            col.filterOptions.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))
+                          ) : (
+                            <>
+                              {options[col.key]?.values.map((v) => (
+                                <option key={v} value={v}>{v}</option>
+                              ))}
+                              {options[col.key]?.hasEmpty && <option value={EMPTY}>(vide)</option>}
+                            </>
+                          )}
                         </Select>
                       ) : kind === 'text' ? (
                         <Input
