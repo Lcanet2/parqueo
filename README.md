@@ -54,9 +54,14 @@ l'API.
 | | |
 | --- | --- |
 | Mettre à jour | `docker compose pull && docker compose up -d` |
-| Sauvegarder | `docker compose exec -T db pg_dump -U parqueo parqueo \| gzip > parqueo.sql.gz` |
+| Sauvegarder | `docker compose exec -T db pg_dump -U parqueo parqueo \| gzip > parqueo.sql.gz` **et** `docker compose exec -T api tar czf - uploads > parqueo-fichiers.tar.gz` |
+| Restaurer les fichiers | `docker compose exec -T api tar xzf - < parqueo-fichiers.tar.gz` |
 | Arrêter | `docker compose down` — les données restent dans les volumes |
 | Tout effacer | `docker compose down -v` |
+
+Une sauvegarde, ce sont **deux** fichiers : la base, et les pièces jointes et
+photos de profil (volume `parqueo-uploads`). La base seule restaure des tickets
+dont les pièces jointes ne s'ouvrent plus.
 
 Pour l'exploitation au quotidien (sauvegardes planifiées, supervision,
 restauration), suivez la

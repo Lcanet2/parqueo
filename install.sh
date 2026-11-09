@@ -157,6 +157,8 @@ echo
 info "  Répertoire   : $(pwd)"
 info "  Mise à jour  : cd $(pwd) && docker compose pull && docker compose up -d"
 info "  Sauvegarde   : docker compose exec -T db pg_dump -U parqueo parqueo | gzip > parqueo.sql.gz"
+info "                 docker compose exec -T api tar czf - uploads > parqueo-fichiers.tar.gz"
+info "                 (la base ET les pièces jointes : l'une sans l'autre ne restaure rien d'utilisable)"
 info "  Arrêt        : docker compose down          (les données restent)"
 echo
 if [ -z "$DOMAINE" ]; then

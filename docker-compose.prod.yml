@@ -12,6 +12,8 @@
 #
 # Mise à jour :   docker compose pull && docker compose up -d
 # Sauvegarde  :   docker compose exec -T db pg_dump -U parqueo parqueo | gzip > parqueo-$(date +%F).sql.gz
+#                 docker compose exec -T api tar czf - uploads > parqueo-fichiers-$(date +%F).tar.gz
+#                 (les deux : la base sans le volume uploads perd toutes les pièces jointes)
 
 services:
   db:
