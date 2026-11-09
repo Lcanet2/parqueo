@@ -1,3 +1,4 @@
+import express from 'express';
 import { Router } from '../lib/router.js';
 import multer from 'multer';
 import path from 'node:path';
@@ -91,50 +92,105 @@ async function findVisibleTicket(id, user) {
 }
 
 // Réponse HTML minimale pour l'enquête de satisfaction (ouverte depuis un email).
-function satisfactionPage(res, status, title, detail) {
+// `contenu` est du HTML déjà échappé par l'appelant.
+function satisfactionPage(res, status, title, contenu) {
   res.status(status).send(
     `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+    <meta name="robots" content="noindex">
     <title>Parqueo</title>
     <body style="font-family:system-ui,sans-serif;background:#f7f7f8;color:#1c1c21;display:flex;justify-content:center;padding-top:15vh">
     <div style="background:#fff;border:1px solid #e4e4e7;border-radius:8px;padding:32px 40px;text-align:center;max-width:420px">
     <h1 style="font-size:18px;margin:0 0 8px">${title}</h1>
-    <p style="font-size:14px;color:#6b6b76;margin:0">${detail}</p>
+    ${contenu}
     </div></body></html>`
   );
 }
 
-// Enquête un clic depuis l'email de résolution — lien signé, sans authentification.
-// Déclarée avant authRequired ; le chemin ne peut pas entrer en collision avec /:id (non numérique).
-router.get('/satisfaction', async (req, res) => {
-  const { token, value } = req.query;
-  if (!['up', 'down'].includes(value)) {
-    return satisfactionPage(res, 400, 'Lien invalide', 'Ce lien de satisfaction est incomplet.');
-  }
+const paragraphe = (texte) => `<p style="font-size:14px;color:#6b6b76;margin:0">${texte}</p>`;
+
+const echapper = (v) =>
+  String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+// Vérifie le jeton d'un lien de satisfaction et retrouve le ticket. Renvoie
+// { ticket } ou { page: [status, titre, contenu] } à afficher tel quel.
+async function lireLienSatisfaction(token) {
   let payload;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-    if (payload.purpose !== 'satisfaction') throw new Error('bad purpose');
+    payload = jwt.verify(String(token ?? ''), process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    if (payload.purpose !== 'satisfaction' || !Number.isInteger(payload.sub)) throw new Error('bad purpose');
   } catch {
-    return satisfactionPage(res, 400, 'Lien invalide ou expiré', 'Ce lien de satisfaction n\'est plus valable.');
+    return { page: [400, 'Lien invalide ou expiré', paragraphe('Ce lien de satisfaction n\'est plus valable.')] };
   }
-
   const ticket = await prisma.ticket.findUnique({ where: { id: payload.sub } });
-  if (!ticket) {
-    return satisfactionPage(res, 404, 'Ticket introuvable', 'Ce ticket n\'existe plus.');
-  }
+  if (!ticket) return { page: [404, 'Ticket introuvable', paragraphe('Ce ticket n\'existe plus.')] };
   if (ticket.satisfaction !== null) {
-    return satisfactionPage(res, 200, 'Retour déjà enregistré', `Votre avis sur le ticket #${ticket.id} a déjà été pris en compte.`);
+    return {
+      page: [200, 'Retour déjà enregistré', paragraphe(`Votre avis sur le ticket #${ticket.id} a déjà été pris en compte.`)],
+    };
   }
+  return { ticket };
+}
 
-  await prisma.ticket.update({
-    where: { id: ticket.id },
+// Enquête un clic depuis l'email de résolution — lien signé, sans authentification.
+// Déclarées avant authRequired ; le chemin ne peut pas entrer en collision avec /:id (non numérique).
+//
+// Le lien de l'email (GET) n'enregistre RIEN : il affiche une confirmation, et
+// c'est le bouton (POST) qui vote. Les passerelles de messagerie (Outlook Safe
+// Links, antivirus, antispam) ouvrent tous les liens d'un message pour les
+// analyser : quand le GET votait, le premier lien qu'elles visitaient — 👍 ou
+// 👎, au hasard de leur parcours — était enregistré avant même que le
+// destinataire ait lu l'email. Un robot suit les liens, il ne soumet pas de
+// formulaire.
+router.get('/satisfaction', async (req, res) => {
+  const { token, value } = req.query;
+  const { ticket, page } = await lireLienSatisfaction(token);
+  if (page) return satisfactionPage(res, ...page);
+
+  const bouton = (v, libelle, choisi) =>
+    `<button type="submit" name="value" value="${v}" style="font:inherit;font-size:15px;padding:10px 18px;margin:0 6px;border-radius:6px;cursor:pointer;` +
+    (choisi
+      ? 'background:#1c1c21;color:#fff;border:1px solid #1c1c21'
+      : 'background:#fff;color:#1c1c21;border:1px solid #d4d4d8') +
+    `">${libelle}</button>`;
+
+  satisfactionPage(
+    res,
+    200,
+    `Votre demande #${ticket.id} a-t-elle été bien traitée ?`,
+    `<p style="font-size:14px;color:#6b6b76;margin:0 0 20px">« ${echapper(ticket.title)} »</p>
+    <form method="post" action="/api/tickets/satisfaction" style="margin:0">
+      <input type="hidden" name="token" value="${echapper(token)}">
+      ${bouton('up', '👍 Oui', value === 'up')}${bouton('down', '👎 Non', value === 'down')}
+    </form>`
+  );
+});
+
+router.post('/satisfaction', express.urlencoded({ extended: false, limit: '8kb' }), async (req, res) => {
+  const { token, value } = req.body ?? {};
+  if (!['up', 'down'].includes(value)) {
+    return satisfactionPage(res, 400, 'Lien invalide', paragraphe('Ce lien de satisfaction est incomplet.'));
+  }
+  const { ticket, page } = await lireLienSatisfaction(token);
+  if (page) return satisfactionPage(res, ...page);
+
+  // Conditionnel : deux envois simultanés n'écrivent qu'une fois.
+  const { count } = await prisma.ticket.updateMany({
+    where: { id: ticket.id, satisfaction: null },
     data: { satisfaction: value === 'up' ? 1 : 0, satisfactionAt: new Date() },
   });
+  if (!count) {
+    return satisfactionPage(
+      res,
+      200,
+      'Retour déjà enregistré',
+      paragraphe(`Votre avis sur le ticket #${ticket.id} a déjà été pris en compte.`)
+    );
+  }
   satisfactionPage(
     res,
     200,
     'Merci pour votre retour !',
-    `Votre avis ${value === 'up' ? '👍' : '👎'} sur le ticket #${ticket.id} a bien été enregistré.`
+    paragraphe(`Votre avis ${value === 'up' ? '👍' : '👎'} sur le ticket #${ticket.id} a bien été enregistré.`)
   );
 });
 

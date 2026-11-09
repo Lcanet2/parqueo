@@ -209,26 +209,62 @@ describe('workflow', () => {
 });
 
 describe('enquête de satisfaction', () => {
-  test('le lien signé enregistre l’avis une seule fois', async () => {
-    const { data } = await creerTicket(t.user);
-    const token = jwt.sign({ sub: data.id, purpose: 'satisfaction' }, process.env.JWT_SECRET, {
-      expiresIn: '30d',
+  const lienSigne = (id) => jwt.sign({ sub: id, purpose: 'satisfaction' }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  const voter = (token, value) =>
+    api.post('/api/tickets/satisfaction', {
+      raw: new URLSearchParams({ token, value }).toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
 
-    const un = await api.get(`/api/tickets/satisfaction?token=${token}&value=up`);
+  test('ouvrir le lien n’enregistre rien : il demande confirmation', async () => {
+    const { data } = await creerTicket(t.user);
+    const token = lienSigne(data.id);
+
+    // Ce que fait une passerelle antivirus : suivre les deux liens de l'email.
+    for (const value of ['up', 'down']) {
+      const page = await api.get(`/api/tickets/satisfaction?token=${token}&value=${value}`);
+      assert.equal(page.status, 200);
+      assert.match(String(page.data), /<form method="post"/);
+    }
+    assert.equal((await prisma.ticket.findUnique({ where: { id: data.id } })).satisfaction, null);
+  });
+
+  test('le bouton enregistre l’avis une seule fois', async () => {
+    const { data } = await creerTicket(t.user);
+    const token = lienSigne(data.id);
+
+    const un = await voter(token, 'up');
     assert.equal(un.status, 200);
+    assert.match(String(un.data), /Merci/);
     assert.equal((await prisma.ticket.findUnique({ where: { id: data.id } })).satisfaction, 1);
 
-    // Second clic : pris en compte une seule fois.
-    const deux = await api.get(`/api/tickets/satisfaction?token=${token}&value=down`);
+    // Second envoi : pris en compte une seule fois.
+    const deux = await voter(token, 'down');
     assert.equal(deux.status, 200);
     assert.match(String(deux.data), /déjà/i);
     assert.equal((await prisma.ticket.findUnique({ where: { id: data.id } })).satisfaction, 1);
+
+    // Et le lien de l'email le dit aussi.
+    const lien = await api.get(`/api/tickets/satisfaction?token=${token}&value=up`);
+    assert.match(String(lien.data), /déjà/i);
+  });
+
+  test('le titre du ticket est échappé dans la page de confirmation', async () => {
+    const { data } = await creerTicket(t.user, { title: '<img src=x onerror=alert(1)>' });
+    const page = await api.get(`/api/tickets/satisfaction?token=${lienSigne(data.id)}&value=up`);
+    assert.doesNotMatch(String(page.data), /<img src=x/);
+    assert.match(String(page.data), /&lt;img/);
   });
 
   test('un lien non signé est refusé', async () => {
-    const res = await api.get('/api/tickets/satisfaction?token=bidon&value=up');
-    assert.equal(res.status, 400);
+    assert.equal((await api.get('/api/tickets/satisfaction?token=bidon&value=up')).status, 400);
+    assert.equal((await voter('bidon', 'up')).status, 400);
+  });
+
+  test('une valeur inconnue est refusée', async () => {
+    const { data } = await creerTicket(t.user);
+    assert.equal((await voter(lienSigne(data.id), 'peut-etre')).status, 400);
+    assert.equal((await prisma.ticket.findUnique({ where: { id: data.id } })).satisfaction, null);
   });
 });
 

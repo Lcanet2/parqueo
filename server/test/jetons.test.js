@@ -75,8 +75,12 @@ describe('jetons qui ne sont pas des sessions', () => {
 
   test('le lien de satisfaction fonctionne toujours pour voter', async () => {
     const lien = jwt.sign({ sub: ticket.id, purpose: 'satisfaction' }, process.env.JWT_SECRET);
-    const res = await api.get(`/api/tickets/satisfaction?token=${lien}&value=up`);
+    const res = await api.post('/api/tickets/satisfaction', {
+      raw: new URLSearchParams({ token: lien, value: 'up' }).toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
     assert.equal(res.status, 200);
+    assert.equal((await prisma.ticket.findUnique({ where: { id: ticket.id } })).satisfaction, 1);
   });
 });
 
