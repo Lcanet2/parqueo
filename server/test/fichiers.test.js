@@ -153,6 +153,54 @@ describe('collecteur email', () => {
     assert.notEqual(r.action, 'comment', `commentaire injecté dans le ticket #${prive.id} d’un tiers`);
   });
 
+  test('une usurpation constatée par le serveur de réception est rejetée', async () => {
+    const avant = await prisma.ticket.count();
+    const r = await handleIncomingEmail({
+      fromAddress: ctx.admin.email,
+      subject: 'Merci de renvoyer vos identifiants',
+      text: 'x',
+      authResults: 'mx.test.local; spf=fail smtp.mailfrom=pirate.net; dkim=none; dmarc=fail header.from=test.local',
+    });
+    assert.equal(r.action, 'ignored');
+    assert.match(r.reason, /non authentifié/);
+    assert.equal(await prisma.ticket.count(), avant);
+  });
+
+  test('une adresse d’admin n’ouvre pas tous les tickets par email', async () => {
+    const tiers = await prisma.user.create({ data: { email: 'tiers2@test.local', name: 'Tiers 2', role: 'user' } });
+    const prive = await prisma.ticket.create({
+      data: { title: 'Privé', description: 'secret', categoryId: ctx.category.id, authorId: tiers.id },
+    });
+    const r = await handleIncomingEmail({
+      fromAddress: ctx.admin.email,
+      subject: `Re: [Parqueo] Ticket #${prive.id}`,
+      text: 'Cliquez ici pour réinitialiser votre mot de passe',
+    });
+    assert.notEqual(r.action, 'comment');
+    assert.equal(await prisma.ticketComment.count({ where: { ticketId: prive.id } }), 0);
+  });
+
+  test('le demandeur et l’assigné répondent toujours par email', async () => {
+    const tk = await prisma.ticket.create({
+      data: {
+        title: 'Imprimante',
+        description: 'bourrage',
+        categoryId: ctx.category.id,
+        authorId: ctx.user.id,
+        assigneeId: ctx.admin.id,
+      },
+    });
+    for (const email of [ctx.user.email, ctx.admin.email]) {
+      const r = await handleIncomingEmail({
+        fromAddress: email,
+        subject: `Re: [Parqueo] Ticket #${tk.id}`,
+        text: 'réponse',
+        authResults: 'mx.test.local; spf=pass; dkim=pass; dmarc=pass',
+      });
+      assert.equal(r.action, 'comment', email);
+    }
+  });
+
   test('un sujet vide donne un titre par défaut', async () => {
     const r = await handleIncomingEmail({ fromAddress: ctx.user.email, subject: '', text: 'sans objet' });
     const tk = await prisma.ticket.findUnique({ where: { id: r.ticketId } });

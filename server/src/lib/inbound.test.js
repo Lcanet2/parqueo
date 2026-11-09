@@ -32,3 +32,32 @@ test('bareAddress extrait et normalise l\'adresse', () => {
   assert.equal(bareAddress('Parqueo <No-Reply@Parqueo.local>'), 'no-reply@parqueo.local');
   assert.equal(bareAddress('marie@exemple.fr'), 'marie@exemple.fr');
 });
+
+import { premierAuthResults, echecAuthentification } from './inbound.js';
+
+test('premierAuthResults ne lit que l’en-tête du serveur de réception (le premier)', () => {
+  const lignes = [
+    { key: 'received', line: 'Received: from mx' },
+    { key: 'authentication-results', line: 'Authentication-Results: mx.entreprise.fr;\r\n dmarc=fail header.from=entreprise.fr' },
+    // Forgé par l'expéditeur : plus bas dans le message.
+    { key: 'authentication-results', line: 'Authentication-Results: faux; dmarc=pass' },
+  ];
+  assert.equal(premierAuthResults(lignes), 'mx.entreprise.fr; dmarc=fail header.from=entreprise.fr');
+  assert.equal(premierAuthResults([]), null);
+  assert.equal(premierAuthResults(), null);
+});
+
+test('echecAuthentification rejette les usurpations constatées', () => {
+  assert.match(echecAuthentification('mx; spf=pass; dkim=none; dmarc=fail action=quarantine'), /DMARC/);
+  assert.match(echecAuthentification('spf=fail (sender IP is 1.2.3.4) smtp.mailfrom=x.fr; dkim=none; dmarc=none; compauth=fail reason=601'), /composite|SPF/);
+  assert.match(echecAuthentification('mx; spf=fail smtp.mailfrom=x.fr; dkim=none'), /SPF/);
+});
+
+test('echecAuthentification laisse passer ce qui n’est pas un échec', () => {
+  assert.equal(echecAuthentification(null), null);
+  assert.equal(echecAuthentification('mx; spf=pass; dkim=pass; dmarc=pass'), null);
+  assert.equal(echecAuthentification('mx; spf=none; dkim=none; dmarc=none'), null);
+  // SPF cassé par un transfert mais signature DKIM valide : légitime.
+  assert.equal(echecAuthentification('mx; spf=fail; dkim=pass header.d=x.fr'), null);
+  assert.equal(echecAuthentification('compauth=pass reason=100'), null);
+});

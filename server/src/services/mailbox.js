@@ -4,8 +4,13 @@ import crypto from 'node:crypto';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { prisma } from '../lib/prisma.js';
-import { extractTicketId, stripQuotedReply, bareAddress } from '../lib/inbound.js';
-import { visibilityWhere } from '../lib/visibility.js';
+import {
+  extractTicketId,
+  stripQuotedReply,
+  bareAddress,
+  premierAuthResults,
+  echecAuthentification,
+} from '../lib/inbound.js';
 import { LIMITS, tronque } from '../lib/input.js';
 import { onTicketCreated } from './workflowEngine.js';
 import { notifyTicketCreated, notifyCommentAdded } from './mailer.js';
@@ -34,8 +39,22 @@ async function saveAttachments(ticketId, userId, attachments) {
 }
 
 // Traite un email entrant déjà parsé. Exporté pour être testable sans IMAP.
-export async function handleIncomingEmail({ fromAddress, subject = '', text = '', attachments = [] }) {
+export async function handleIncomingEmail({
+  fromAddress,
+  subject = '',
+  text = '',
+  attachments = [],
+  authResults = null,
+}) {
   const sender = bareAddress(fromAddress);
+
+  // Usurpation détectée par le serveur de réception : le message n'engage pas
+  // la personne dont il porte l'adresse.
+  const echec = echecAuthentification(authResults);
+  if (echec) {
+    console.warn(`[collecteur] email rejeté — expéditeur ${sender} non authentifié (${echec})`);
+    return { action: 'ignored', reason: `expéditeur non authentifié : ${echec}` };
+  }
 
   // Anti-boucle : on ignore ce que le système s'envoie à lui-même.
   const selfAddresses = [process.env.SMTP_FROM, process.env.IMAP_USER].filter(Boolean).map(bareAddress);
@@ -50,16 +69,17 @@ export async function handleIncomingEmail({ fromAddress, subject = '', text = ''
   // Un email peut être arbitrairement long : on borne comme la saisie web.
   const body = tronque(stripQuotedReply(text), LIMITS.commentaire) || '(message vide)';
 
-  // Réponse à un ticket existant → commentaire. La visibilité est celle de
-  // l'expéditeur, exactement comme dans l'interface : sans ce filtre, il
-  // suffisait de connaître un numéro de ticket pour y écrire depuis n'importe
-  // quel compte connu (et l'adresse d'expédition n'est pas authentifiée).
+  // Réponse à un ticket existant → commentaire, seulement de la part du
+  // demandeur ou de l'assigné : ce sont eux qui reçoivent les notifications
+  // auxquelles on répond. L'adresse d'expédition reste moins sûre qu'une
+  // session : la visibilité complète du rôle (tous les tickets pour un admin)
+  // ferait d'une adresse d'administrateur usurpée un passe-partout.
   const ticketId = extractTicketId(subject);
   if (ticketId) {
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
-        ...visibilityWhere({ sub: user.id, role: user.role, teamId: user.teamId }),
+        OR: [{ authorId: user.id }, { assigneeId: user.id }],
       },
       include: {
         author: { select: { id: true, name: true, email: true } },
@@ -140,6 +160,7 @@ async function pollOnce() {
           subject: parsed.subject ?? '',
           text: parsed.text ?? '',
           attachments: parsed.attachments ?? [],
+          authResults: premierAuthResults(parsed.headerLines),
         });
       } catch (err) {
         console.error('[collecteur] échec de traitement d\'un email :', err.message);
