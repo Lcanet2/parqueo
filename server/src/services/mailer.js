@@ -29,6 +29,12 @@ export function optionsSmtp(env = process.env) {
 
 let transport = process.env.SMTP_HOST ? nodemailer.createTransport(optionsSmtp()) : null;
 
+// Tests : remplace le transport (null = retour au journal console) pour lire
+// les messages réellement composés — destinataires, sujet, corps.
+export function definirTransport(t) {
+  transport = t;
+}
+
 // Exposé pour les étapes « email » des workflows.
 export async function sendMail(to, subject, text) {
   return send(to, subject, text);
@@ -61,9 +67,22 @@ async function send(to, subject, text) {
   }
 }
 
+// Adresse publique de l'application. Sans APP_URL (développement), l'origine
+// du client : c'est elle qui sert les pages, et elle proxifie /api.
 function appUrl() {
-  return process.env.APP_URL || `http://localhost:${process.env.PORT || 4000}`;
+  return (process.env.APP_URL || process.env.CLIENT_ORIGIN || `http://localhost:${process.env.PORT || 4000}`).replace(
+    /\/+$/,
+    ''
+  );
 }
+
+// Adresse d'un ticket dans l'application. Un destinataire non connecté passe
+// par l'écran de connexion, puis arrive bien sur le ticket.
+export function urlTicket(id) {
+  return `${appUrl()}/tickets/${id}`;
+}
+
+const lien = (ticket) => `\n\nVoir le ticket : ${urlTicket(ticket.id)}`;
 
 // Lien signé valable 30 jours pour l'enquête de satisfaction un clic.
 function satisfactionLinks(ticket) {
@@ -82,7 +101,7 @@ export async function notifyTicketCreated(ticket) {
   return send(
     to,
     `[Parqueo] Ticket #${ticket.id} créé : ${ticket.title}`,
-    `Le ticket #${ticket.id} « ${ticket.title} » a été créé.\n\n${ticket.description}\n\nPriorité : ${PRIORITY_LABELS[ticket.priority] ?? ticket.priority}`
+    `Le ticket #${ticket.id} « ${ticket.title} » a été créé.\n\n${ticket.description}\n\nPriorité : ${PRIORITY_LABELS[ticket.priority] ?? ticket.priority}${lien(ticket)}`
   );
 }
 
@@ -92,7 +111,7 @@ export async function notifyStatusChanged(ticket, oldStatus) {
   const to = [ticket.author?.email, ticket.assignee?.email].filter(Boolean).join(', ');
   const oldLabel = STATUS_LABELS[oldStatus] ?? oldStatus;
   const newLabel = STATUS_LABELS[ticket.status] ?? ticket.status;
-  let body = `Le statut du ticket #${ticket.id} « ${ticket.title} » est passé de « ${oldLabel} » à « ${newLabel} ».`;
+  let body = `Le statut du ticket #${ticket.id} « ${ticket.title} » est passé de « ${oldLabel} » à « ${newLabel} ».${lien(ticket)}`;
   if (ticket.status === 'resolved' && settings.satisfactionSurvey) {
     body += `\n\n${satisfactionLinks(ticket)}`;
   }
@@ -104,7 +123,7 @@ export async function notifyAssigned(ticket) {
   return send(
     ticket.assignee?.email,
     `[Parqueo] Ticket #${ticket.id} vous a été assigné : ${ticket.title}`,
-    `Le ticket #${ticket.id} « ${ticket.title} » vous a été assigné.\n\nPriorité : ${PRIORITY_LABELS[ticket.priority] ?? ticket.priority}\nDemandeur : ${ticket.author?.name ?? '—'}`
+    `Le ticket #${ticket.id} « ${ticket.title} » vous a été assigné.\n\nPriorité : ${PRIORITY_LABELS[ticket.priority] ?? ticket.priority}\nDemandeur : ${ticket.author?.name ?? '—'}${lien(ticket)}`
   );
 }
 
@@ -121,6 +140,6 @@ export async function notifyCommentAdded(ticket, comment) {
   return send(
     to,
     `[Parqueo] Ticket #${ticket.id} : ${comment.internal ? 'note interne' : 'nouveau message'} de ${comment.author?.name ?? '—'}`,
-    `${comment.author?.name ?? 'Quelqu\'un'} a répondu sur le ticket #${ticket.id} « ${ticket.title} » :\n\n${comment.body}`
+    `${comment.author?.name ?? 'Quelqu\'un'} a répondu sur le ticket #${ticket.id} « ${ticket.title} » :\n\n${comment.body}${lien(ticket)}`
   );
 }

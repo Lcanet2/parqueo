@@ -12,6 +12,9 @@ export function AuthProvider({ children }) {
   // Instance jamais installée : aucun compte n'existe encore en base. Tant que
   // c'est vrai, toute l'application redirige vers l'écran d'installation.
   const [needsSetup, setNeedsSetup] = useState(false);
+  // Déconnexion demandée : la page quittée ne doit pas être rouverte à la
+  // prochaine connexion (peut-être celle de quelqu'un d'autre) — lib/retour.js.
+  const [sortieVolontaire, setSortieVolontaire] = useState(false);
 
   useEffect(() => {
     // Enregistré avant le premier appel : dès que l'API renvoie 401, la session
@@ -66,6 +69,7 @@ export function AuthProvider({ children }) {
     setToken(token);
     setUser(user);
     setSessionMessage(null);
+    setSortieVolontaire(false);
   }
 
   // Le compte a changé côté serveur (photo de profil) : on rafraîchit la copie
@@ -84,6 +88,7 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
+    setSortieVolontaire(true);
     setToken(null);
     setUser(null);
     setSessionMessage(null);
@@ -91,7 +96,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, sessionMessage, needsSetup, completeSetup, updateUser }}
+      value={{ user, loading, login, logout, sessionMessage, needsSetup, completeSetup, updateUser, sortieVolontaire }}
     >
       {children}
     </AuthContext.Provider>

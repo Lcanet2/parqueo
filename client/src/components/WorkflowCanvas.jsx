@@ -888,7 +888,7 @@ function VariableHint() {
   return (
     <p className="mt-1 text-xs text-ink-faint">
       Variables : <code>{'{{ticket.title}}'}</code>, <code>{'{{author.name}}'}</code>,{' '}
-      <code>{'{{category.name}}'}</code>…
+      <code>{'{{category.name}}'}</code>, <code>{'{{ticket.url}}'}</code> (lien vers le ticket)…
     </p>
   );
 }

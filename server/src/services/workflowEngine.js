@@ -6,7 +6,7 @@ import {
   isGateSatisfied,
   evaluateCondition,
 } from '../lib/workflowUtils.js';
-import { sendMail } from './mailer.js';
+import { sendMail, urlTicket } from './mailer.js';
 import { statutApresAssignation } from '../lib/statut.js';
 
 // Moteur de workflows : parcours de graphe à états. Un ticket qui correspond à
@@ -218,7 +218,7 @@ async function applyAction(step, ticket, wf) {
           ticketId: ticket.id,
           authorId: ticket.authorId,
           type: 'event',
-          body: renderTemplate(cfg.body, ticket),
+          body: renderTemplate(cfg.body, ticket, { 'ticket.url': urlTicket(ticket.id) }),
         },
       });
       return ticket;
@@ -235,8 +235,8 @@ async function applyAction(step, ticket, wf) {
       if (!to) return ticket;
       await sendMail(
         to,
-        renderTemplate(cfg.subject ?? '', ticket) || `[Parqueo] Ticket #${ticket.id}`,
-        renderTemplate(cfg.body ?? '', ticket)
+        renderTemplate(cfg.subject ?? '', ticket, { 'ticket.url': urlTicket(ticket.id) }) || `[Parqueo] Ticket #${ticket.id}`,
+        renderTemplate(cfg.body ?? '', ticket, { 'ticket.url': urlTicket(ticket.id) })
       );
       return ticket;
     }

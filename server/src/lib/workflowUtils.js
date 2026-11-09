@@ -65,8 +65,11 @@ export function evaluateCondition(cfg = {}, ticket) {
 }
 
 // Variables disponibles dans les notes et emails de workflow : {{ticket.title}}, etc.
-export function renderTemplate(template = '', ticket) {
+// `extra` complète les variables calculées hors de ce module pur (ex.
+// ticket.url, qui dépend de la configuration).
+export function renderTemplate(template = '', ticket, extra = {}) {
   const values = {
+    ...extra,
     'ticket.id': ticket.id,
     'ticket.title': ticket.title,
     'ticket.description': ticket.description,

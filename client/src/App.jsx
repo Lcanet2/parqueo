@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { memoriserRetour, lireRetour, oublierRetour } from './lib/retour.js';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { SettingsProvider } from './context/SettingsContext.jsx';
 import Settings from './pages/Settings.jsx';
@@ -22,12 +23,23 @@ import { Spinner } from './components/ui.jsx';
 import GlobalErrors from './components/GlobalErrors.jsx';
 
 function Protected({ children }) {
-  const { user, loading, needsSetup } = useAuth();
+  const { user, loading, needsSetup, sortieVolontaire } = useAuth();
+  const location = useLocation();
   if (loading) return <Spinner />;
   // Une instance sans aucun compte n'a rien à protéger : on envoie sur
   // l'installation plutôt que sur un écran de connexion impossible à passer.
   if (needsSetup) return <Navigate to="/installation" replace />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    // La page demandée (lien d'un email, session expirée) est rouverte après
+    // la connexion — voir lib/retour.js.
+    if (!sortieVolontaire) memoriserRetour(location.pathname + location.search);
+    return <Navigate to="/login" replace />;
+  }
+  const retour = lireRetour();
+  if (retour) {
+    if (retour !== location.pathname + location.search) return <Navigate to={retour} replace />;
+    oublierRetour(); // arrivé : la page mémorisée a servi
+  }
   return children;
 }
 

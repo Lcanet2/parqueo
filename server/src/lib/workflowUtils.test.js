@@ -110,3 +110,12 @@ test('describeGate produit un libellé lisible', () => {
     'en attente du statut « RESOLVED »'
   );
 });
+
+test('renderTemplate accepte des variables calculées ailleurs (ticket.url)', () => {
+  assert.equal(
+    renderTemplate('{{ticket.url}}', { id: 3 }, { 'ticket.url': 'https://support.x/tickets/3' }),
+    'https://support.x/tickets/3'
+  );
+  // Une variable du ticket ne peut pas être écrasée par `extra`.
+  assert.equal(renderTemplate('{{ticket.id}}', { id: 3 }, { 'ticket.id': 99 }), '3');
+});
