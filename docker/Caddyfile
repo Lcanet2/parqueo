@@ -58,9 +58,16 @@
 		# Les fichiers produits par Vite portent un hachage dans leur nom : leur
 		# contenu ne change jamais pour une URL donnée.
 		header /assets/* Cache-Control "public, max-age=31536000, immutable"
-		# index.html, lui, doit être rechargé après chaque mise à jour, sinon le
-		# navigateur continue de demander les anciens fichiers hachés.
-		header /index.html Cache-Control "no-cache"
+		# Tout le reste — index.html avant tout — doit être revalidé à chaque
+		# visite, sinon le navigateur garde après une mise à jour un index.html
+		# qui demande des fichiers hachés disparus : page blanche.
+		#
+		# Le matcher porte sur le chemin DEMANDÉ : `header` s'applique avant la
+		# réécriture de try_files. Un ancien `header /index.html` ne couvrait
+		# donc ni « / » ni « /tickets/12 », qui servent pourtant index.html —
+		# et le navigateur les mettait en cache de lui-même faute de consigne.
+		@hors_assets not path /assets/*
+		header @hors_assets Cache-Control "no-cache"
 
 		try_files {path} /index.html
 		file_server
